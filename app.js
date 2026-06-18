@@ -2,19 +2,44 @@
 
 const STORAGE_KEY = 'orbit_money_data_v1';
 
-const DEFAULT_CATEGORIES = [
-  { id: 'food',      name: 'Food',          icon: '🍔', color: '#FF8A5B' },
-  { id: 'transport',  name: 'Transport',     icon: '🚗', color: '#5B9CFF' },
-  { id: 'bills',      name: 'Bills',         icon: '💡', color: '#FFC857' },
-  { id: 'shopping',   name: 'Shopping',      icon: '🛍️', color: '#FF6FB5' },
-  { id: 'entertainment', name: 'Entertainment', icon: '🎮', color: '#A06AFF' },
-  { id: 'health',     name: 'Health',        icon: '💊', color: '#00FF87' },
-  { id: 'education',  name: 'Education',     icon: '📚', color: '#2575FC' },
-  { id: 'other',      name: 'Other',         icon: '✦',  color: '#8B8AA0' },
-];
+// Modern line-icon set (inline SVG inner markup, stroke-based, 24x24 viewBox).
+const ICON_LIBRARY = {
+  food: '<path d="M7.5 3v4"/><path d="M9.5 3v4"/><path d="M11.5 3v4"/><path d="M7.5 7h4"/><path d="M9.5 7v14"/><ellipse cx="15.8" cy="6.6" rx="2.3" ry="3.2"/><path d="M15.8 9.8V21"/>',
+  transport: '<path d="M5.2 11l1.4-3.8A2 2 0 0 1 8.5 5.9h7a2 2 0 0 1 1.9 1.3L18.8 11"/><rect x="3.2" y="11" width="17.6" height="5" rx="1.6"/><circle cx="7.5" cy="16.4" r="1.4"/><circle cx="16.5" cy="16.4" r="1.4"/>',
+  bills: '<path d="M6.5 3.8h11v16.4l-1.8-1.2-1.8 1.2-1.9-1.2-1.8 1.2-1.9-1.2-1.8 1.2z"/><line x1="9" y1="8.2" x2="15" y2="8.2"/><line x1="9" y1="11.6" x2="15" y2="11.6"/>',
+  shopping: '<path d="M6.3 8h11.4l-.9 12H7.2z"/><path d="M9 8V6.4a3 3 0 0 1 6 0V8"/>',
+  entertainment: '<circle cx="12" cy="12" r="8.4"/><path d="M10.4 8.8l4.6 3.2-4.6 3.2z"/>',
+  health: '<path d="M12 19.4C12 19.4 4.6 15 4.6 9.6A3.8 3.8 0 0 1 12 7.3 3.8 3.8 0 0 1 19.4 9.6C19.4 15 12 19.4 12 19.4Z"/>',
+  education: '<path d="M12 5L2.6 9.1 12 13.2 21.4 9.1z"/><path d="M6.2 11v4.4c0 1.2 2.6 2.3 5.8 2.3s5.8-1.1 5.8-2.3V11"/><line x1="21.4" y1="9.1" x2="21.4" y2="13"/>',
+  other: '<circle cx="12" cy="12" r="8.4"/><circle cx="8.6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="15.4" cy="12" r="1"/>',
+  home: '<path d="M4 11l8-6.4 8 6.4"/><path d="M6.3 9.4V19a1 1 0 0 0 1 1h9.4a1 1 0 0 0 1-1V9.4"/><path d="M10 20v-5h4v5"/>',
+  travel: '<path d="M21 4L3 10.6l6.6 2.2L12 19.4 21 4z"/><path d="M9.6 12.8L21 4"/>',
+  music: '<circle cx="7" cy="17.4" r="2.2"/><circle cx="16.6" cy="15.4" r="2.2"/><path d="M9.2 17.4V7l9.6-2v10.4"/><path d="M9.2 9l9.6-2"/>',
+  pets: '<ellipse cx="12" cy="15.2" rx="4" ry="3.2"/><circle cx="6.6" cy="11.2" r="1.5"/><circle cx="10" cy="8.6" r="1.5"/><circle cx="14" cy="8.6" r="1.5"/><circle cx="17.4" cy="11.2" r="1.5"/>',
+  work: '<rect x="3.2" y="7.6" width="17.6" height="11" rx="2"/><path d="M8.6 7.6V6a2 2 0 0 1 2-2h2.8a2 2 0 0 1 2 2v1.6"/><line x1="3.2" y1="12.4" x2="20.8" y2="12.4"/>',
+  gift: '<rect x="4.2" y="9.6" width="15.6" height="10.4" rx="1.5"/><line x1="4.2" y1="13" x2="19.8" y2="13"/><line x1="12" y1="9.6" x2="12" y2="20"/><path d="M12 9.6S10.6 5.2 8.7 6 8 9.6 12 9.6z"/><path d="M12 9.6s1.4-4.4 3.3-3.6.7 3.6-3.3 3.6z"/>',
+  coffee: '<path d="M5 8.6h10.8v5.2a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/><path d="M15.8 9.6h2.4a2 2 0 0 1 0 4h-2.4"/><line x1="8" y1="3.6" x2="8" y2="5.6"/><line x1="11.4" y1="3.6" x2="11.4" y2="5.6"/>',
+  fitness: '<line x1="6.6" y1="6.2" x2="6.6" y2="17.8"/><line x1="17.4" y1="6.2" x2="17.4" y2="17.8"/><line x1="4" y1="9" x2="4" y2="15"/><line x1="20" y1="9" x2="20" y2="15"/><line x1="6.6" y1="12" x2="17.4" y2="12"/>',
+  phone: '<rect x="7" y="3" width="10" height="18" rx="2.5"/><line x1="10.5" y1="18" x2="13.5" y2="18"/>',
+  wallet: '<rect x="3.2" y="6.6" width="17.6" height="12" rx="2.4"/><path d="M16 11.4a1.5 1.5 0 0 0 0 3h4.8v-3z"/>',
+  globe: '<circle cx="12" cy="12" r="8.4"/><line x1="3.6" y1="12" x2="20.4" y2="12"/><path d="M12 3.6a13 13 0 0 1 0 16.8 13 13 0 0 1 0-16.8z"/>',
+  star: '<path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.2 1 5.9L12 17.3 6.8 20l1-5.9L3.5 9.8l5.9-.8z"/>',
+  income: '<path d="M5 16.5l4.5-4.5 3 3 6.5-7"/><path d="M16 7.5h4v4"/>'
+};
 
-const ICON_CHOICES = ['🍔','🚗','💡','🛍️','🎮','💊','📚','✦','🏠','✈️','🎵','🐾','💼','🎁','☕','🍺','🏋️','📱','💳','🧾','🌐','🧴','🚌','🛠️'];
-const COLOR_CHOICES = ['#FF8A5B','#5B9CFF','#FFC857','#FF6FB5','#A06AFF','#00FF87','#2575FC','#8B8AA0','#FF5C7A','#6A11CB','#3DDC97','#FFD23F'];
+const ICON_CHOICES = ['food','transport','bills','shopping','entertainment','health','education','home','travel','music','pets','work','gift','coffee','fitness','phone','wallet','globe','star','other'];
+const COLOR_CHOICES = ['#F0997B','#5B9CFF','#FFC857','#ED93B1','#A78BFA','#5DCAA5','#85B7EB','#9FB0C4','#FF8A8A','#5B6EF5','#3DDC97','#FFD23F'];
+
+const DEFAULT_CATEGORIES = [
+  { id: 'food',          name: 'Food',          icon: 'food',          color: '#F0997B' },
+  { id: 'transport',     name: 'Transport',     icon: 'transport',     color: '#5B9CFF' },
+  { id: 'bills',         name: 'Bills',         icon: 'bills',         color: '#FFC857' },
+  { id: 'shopping',      name: 'Shopping',      icon: 'shopping',      color: '#ED93B1' },
+  { id: 'entertainment', name: 'Entertainment', icon: 'entertainment', color: '#A78BFA' },
+  { id: 'health',        name: 'Health',        icon: 'health',        color: '#5DCAA5' },
+  { id: 'education',     name: 'Education',      icon: 'education',     color: '#85B7EB' },
+  { id: 'other',         name: 'Other',         icon: 'other',         color: '#9FB0C4' },
+];
 
 const CURRENCIES = {
   BDT: { symbol: '৳', label: 'BDT (৳)' },
@@ -29,9 +54,9 @@ function defaultState(){
     currency: 'BDT',
     monthlyIncomeBase: 0,
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES)),
-    transactions: [], // {id, type:'expense'|'income', amount, categoryId, note, date(YYYY-MM-DD), createdAt}
-    budgets: [], // {id, categoryId, amount}
-    recurring: [], // {id, name, categoryId, amount, dayOfMonth, lastAppliedMonth: 'YYYY-MM'}
+    transactions: [],
+    budgets: [],
+    recurring: [],
   };
 }
 
@@ -80,6 +105,27 @@ function getCategory(id){
   return state.categories.find(c => c.id === id) || state.categories[state.categories.length-1];
 }
 
+// ---------- Icon rendering ----------
+function svgGlyph(inner, color){
+  return '<svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="' + (color || 'currentColor') +
+    '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+}
+function resolveIconKey(cat){
+  if(cat && cat.icon && ICON_LIBRARY[cat.icon]) return cat.icon;   // new-style key
+  if(cat && cat.id && ICON_LIBRARY[cat.id]) return cat.id;         // auto-upgrade default cats
+  return null;
+}
+// Returns inner HTML for a .cat-icon container, for a category.
+function catGlyph(cat){
+  const key = resolveIconKey(cat);
+  if(key) return svgGlyph(ICON_LIBRARY[key], cat.color);
+  if(cat && cat.icon) return '<span class="legacy-emoji">' + cat.icon + '</span>'; // backward compat
+  return svgGlyph(ICON_LIBRARY.other, cat ? cat.color : '#ffffff');
+}
+function incomeGlyph(){
+  return svgGlyph(ICON_LIBRARY.income, '#BFE0FF');
+}
+
 function toast(msg){
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -89,7 +135,6 @@ function toast(msg){
 }
 
 // ---------- Recurring application ----------
-// Applies any recurring items whose day has passed this month and haven't been logged yet.
 function applyDueRecurring(){
   const now = new Date();
   const mKey = currentMonthKey(now);
@@ -97,7 +142,7 @@ function applyDueRecurring(){
   let appliedAny = false;
 
   state.recurring.forEach(r => {
-    if(r.lastAppliedMonth === mKey) return; // already applied this month
+    if(r.lastAppliedMonth === mKey) return;
     if(todayDate >= r.dayOfMonth){
       const dateStr = mKey + '-' + String(r.dayOfMonth).padStart(2,'0');
       state.transactions.push({
@@ -115,15 +160,11 @@ function applyDueRecurring(){
     }
   });
 
-  if(appliedAny){
-    saveState();
-  }
+  if(appliedAny) saveState();
 }
 
 // ---------- Derived data helpers ----------
-
 function txInRange(start, end){
-  // start, end are Date objects, inclusive start, exclusive end
   return state.transactions.filter(t => {
     const d = new Date(t.date + 'T00:00:00');
     return d >= start && d < end;
@@ -137,14 +178,14 @@ function getRangeForPeriod(period, refDate = new Date()){
     start = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     end = new Date(d.getFullYear(), d.getMonth(), d.getDate()+1);
   } else if(period === 'week'){
-    const dow = d.getDay(); // 0=Sun
+    const dow = d.getDay();
     const diffToMonday = (dow === 0 ? -6 : 1 - dow);
     start = new Date(d.getFullYear(), d.getMonth(), d.getDate() + diffToMonday);
     end = new Date(start.getFullYear(), start.getMonth(), start.getDate()+7);
   } else if(period === 'month'){
     start = new Date(d.getFullYear(), d.getMonth(), 1);
     end = new Date(d.getFullYear(), d.getMonth()+1, 1);
-  } else { // year
+  } else {
     start = new Date(d.getFullYear(), 0, 1);
     end = new Date(d.getFullYear()+1, 0, 1);
   }
@@ -169,6 +210,8 @@ let currentPeriod = 'month';
 let currentView = 'home';
 let txTypeInSheet = 'expense';
 let selectedCategoryInSheet = null;
+let editingTxId = null;
+let viewingTxId = null;
 let editingBudgetId = null;
 let editingRecurringId = null;
 let editingCategoryId = null;
@@ -199,24 +242,30 @@ function renderHome(){
   const spent = monthSpentTotal();
   const remaining = income - spent;
   const saved = Math.max(remaining, 0);
+  const over = income > 0 && remaining < 0;
 
   document.getElementById('stat-income').textContent = fmtMoney(income);
   document.getElementById('stat-spent').textContent = fmtMoney(spent);
   document.getElementById('stat-saved').textContent = fmtMoney(saved);
 
-  document.getElementById('orbit-amount').textContent = fmtMoney(remaining);
+  const labelEl = document.getElementById('orbit-label');
+  const amtEl = document.getElementById('orbit-amount');
+  labelEl.textContent = over ? 'Overspent by' : 'Remaining this month';
+  amtEl.textContent = over ? fmtMoney(Math.abs(remaining)) : fmtMoney(remaining);
+  amtEl.classList.toggle('over', over);
   document.getElementById('orbit-sub').textContent = 'of ' + fmtMoney(income) + ' income';
-  document.getElementById('orbit-label').textContent = remaining < 0 ? 'Over budget this month' : 'Remaining this month';
 
   const circumference = 2 * Math.PI * 118;
-  // remainingPct = how much of the ring should be filled (gradient) representing money left.
-  // No income set yet -> ring stays empty (nothing earned to visualize), not full.
   let remainingPct = 0;
-  if(income > 0){
+  if(income > 0 && !over){
     remainingPct = Math.max(0, Math.min(1, (income - spent) / income));
   }
-  const offset = circumference * (1 - remainingPct);
+  // When overspent, fill the whole ring (and colour it red via .over class).
+  const offset = over ? 0 : circumference * (1 - remainingPct);
   const fillEl = document.getElementById('orbit-fill');
+  const wrapEl = document.querySelector('.orbit-wrap');
+  fillEl.classList.toggle('over', over);
+  if(wrapEl) wrapEl.classList.toggle('over', over);
   fillEl.style.strokeDasharray = circumference;
   requestAnimationFrame(()=>{ fillEl.style.strokeDashoffset = offset; });
 
@@ -235,7 +284,7 @@ function renderHome(){
       const cat = getCategory(catId);
       const pctOfTotal = totalSpentPeriod>0 ? Math.round((amt/totalSpentPeriod)*100) : 0;
       return '<div class="category-row">' +
-        '<div class="cat-icon" style="background:'+cat.color+'22;">'+cat.icon+'</div>' +
+        '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<div class="cat-info">' +
           '<div class="cat-name-row"><span class="cat-name">'+escapeHtml(cat.name)+'</span><span class="cat-amount">'+fmtMoney(amt)+' · '+pctOfTotal+'%</span></div>' +
           '<div class="cat-bar-track"><div class="cat-bar-fill" style="width:'+pctOfTotal+'%; background:'+cat.color+';"></div></div>' +
@@ -243,7 +292,7 @@ function renderHome(){
     }).join('');
   }
 
-  const recent = [...state.transactions].sort((a,b)=> b.createdAt - a.createdAt).slice(0,5);
+  const recent = state.transactions.slice().sort((a,b)=> b.createdAt - a.createdAt).slice(0,5);
   document.getElementById('tx-list-home').innerHTML = recent.map(renderTxRow).join('');
   document.getElementById('home-empty').hidden = state.transactions.length > 0;
 
@@ -257,14 +306,17 @@ function escapeHtml(s){
 }
 
 function renderTxRow(t){
+  const isIncome = t.type === 'income';
   const cat = getCategory(t.categoryId);
-  const sign = t.type === 'expense' ? '-' : '+';
+  const sign = isIncome ? '+' : '-';
   const dateLabel = formatDateLabel(t.date);
+  const iconBg = isIncome ? 'rgba(185,212,240,0.18)' : (cat.color + '22');
+  const glyph = isIncome ? incomeGlyph() : catGlyph(cat);
   return '<div class="tx-row" data-id="'+t.id+'">' +
-    '<div class="cat-icon" style="background:'+cat.color+'22;">'+(t.type === 'income' ? '💰' : cat.icon)+'</div>' +
+    '<div class="cat-icon" style="background:'+iconBg+';">'+glyph+'</div>' +
     '<div class="tx-info">' +
-      '<div class="tx-note">'+escapeHtml(t.note || (t.type === 'income' ? 'Income' : cat.name))+'</div>' +
-      '<div class="tx-meta">'+(t.type === 'income' ? 'Income' : escapeHtml(cat.name))+' · '+dateLabel+'</div>' +
+      '<div class="tx-note">'+escapeHtml(t.note || (isIncome ? 'Income' : cat.name))+'</div>' +
+      '<div class="tx-meta">'+(isIncome ? 'Income' : escapeHtml(cat.name))+' · '+dateLabel+'</div>' +
     '</div>' +
     '<div class="tx-amount '+t.type+'">'+sign+fmtMoney(t.amount).replace('-','')+'</div></div>';
 }
@@ -382,7 +434,7 @@ function renderHistory(){
   const chipsEl = document.getElementById('filter-chips');
   const chips = ['all'].concat(state.categories.map(function(c){return c.id;}));
   chipsEl.innerHTML = chips.map(function(c){
-    const label = c === 'all' ? 'All' : getCategory(c).icon + ' ' + getCategory(c).name;
+    const label = c === 'all' ? 'All' : getCategory(c).name;
     return '<button class="filter-chip '+(historyFilter===c?'active':'')+'" data-cat="'+c+'">'+escapeHtml(label)+'</button>';
   }).join('');
 
@@ -422,7 +474,7 @@ function renderBudgets(){
 
     return '<div class="budget-card" data-id="'+b.id+'">' +
       '<div class="budget-top">' +
-        '<div class="cat-icon" style="background:'+cat.color+'22;">'+cat.icon+'</div>' +
+        '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<span class="budget-cat-name">'+escapeHtml(cat.name)+'</span>' +
         '<span class="budget-amounts"><strong>'+fmtMoney(spent)+'</strong> / '+fmtMoney(b.amount)+'</span>' +
       '</div>' +
@@ -443,7 +495,7 @@ function renderRecurring(){
   listEl.innerHTML = state.recurring.map(function(r){
     const cat = getCategory(r.categoryId);
     return '<div class="recurring-card" data-id="'+r.id+'">' +
-      '<div class="cat-icon" style="background:'+cat.color+'22;">'+cat.icon+'</div>' +
+      '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
       '<div class="recurring-info">' +
         '<div class="recurring-name">'+escapeHtml(r.name)+'</div>' +
         '<div class="recurring-meta">Day '+r.dayOfMonth+' of every month · '+escapeHtml(cat.name)+'</div>' +
@@ -462,7 +514,7 @@ function renderCategoryManage(){
   const listEl = document.getElementById('category-manage-list');
   listEl.innerHTML = state.categories.map(function(c){
     return '<div class="category-manage-row" data-id="'+c.id+'">' +
-      '<div class="cat-icon" style="background:'+c.color+'22;">'+c.icon+'</div>' +
+      '<div class="cat-icon" style="background:'+c.color+'22;">'+catGlyph(c)+'</div>' +
       '<div class="cat-info"><span class="cat-name">'+escapeHtml(c.name)+'</span></div>' +
       '<svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="color:var(--text-faint)"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>';
   }).join('');
@@ -493,18 +545,19 @@ function closeSheet(id){
   document.getElementById(id).hidden = true;
 }
 function closeAllSheets(){
-  ['sheet-add','sheet-income','sheet-budget','sheet-recurring','sheet-category'].forEach(function(id){
-    document.getElementById(id).hidden = true;
+  ['sheet-add','sheet-tx-detail','sheet-income','sheet-budget','sheet-recurring','sheet-category'].forEach(function(id){
+    const el = document.getElementById(id);
+    if(el) el.hidden = true;
   });
   document.getElementById('sheet-backdrop').hidden = true;
 }
 
-// ---------- Add transaction sheet ----------
+// ---------- Category picker grid ----------
 function buildCategoryGrid(containerId, selectedId, onSelect){
   const el = document.getElementById(containerId);
   el.innerHTML = state.categories.map(function(c){
     return '<button type="button" class="category-chip '+(c.id===selectedId?'selected':'')+'" data-cat="'+c.id+'">' +
-      '<span class="cc-icon" style="background:'+c.color+'22;">'+c.icon+'</span><span>'+escapeHtml(c.name)+'</span></button>';
+      '<span class="cc-icon" style="background:'+c.color+'22;">'+catGlyph(c)+'</span><span>'+escapeHtml(c.name)+'</span></button>';
   }).join('');
   Array.from(el.querySelectorAll('.category-chip')).forEach(function(chip){
     chip.addEventListener('click', function(){
@@ -515,17 +568,28 @@ function buildCategoryGrid(containerId, selectedId, onSelect){
   });
 }
 
-function openAddSheet(){
-  txTypeInSheet = 'expense';
-  selectedCategoryInSheet = state.categories[0].id;
-  document.getElementById('amount-input').value = '';
-  document.getElementById('note-input').value = '';
-  document.getElementById('date-input').value = todayISO();
-  document.querySelectorAll('.type-pill').forEach(function(p){ p.classList.toggle('active', p.dataset.type==='expense'); });
-  document.getElementById('category-field-group').hidden = false;
+// ---------- Add / edit transaction sheet ----------
+function openAddSheet(editId){
+  editingTxId = (typeof editId === 'string') ? editId : null;
+  const editing = editingTxId ? state.transactions.find(function(t){return t.id===editingTxId;}) : null;
+
+  document.getElementById('add-sheet-title').textContent = editing ? 'Edit transaction' : 'New transaction';
+  document.getElementById('btn-save-tx').textContent = editing ? 'Save changes' : 'Save transaction';
+
+  txTypeInSheet = editing ? editing.type : 'expense';
+  selectedCategoryInSheet = editing ? (editing.categoryId || state.categories[0].id) : state.categories[0].id;
+
+  document.getElementById('amount-input').value = editing ? editing.amount : '';
+  document.getElementById('note-input').value = editing ? (editing.note || '') : '';
+  document.getElementById('date-input').value = editing ? editing.date : todayISO();
+
+  document.querySelectorAll('.type-pill').forEach(function(p){ p.classList.toggle('active', p.dataset.type===txTypeInSheet); });
+  document.getElementById('category-field-group').hidden = (txTypeInSheet === 'income');
+  document.getElementById('amount-stage-label').textContent = txTypeInSheet === 'income' ? 'Income amount' : 'Amount';
+
   buildCategoryGrid('category-grid-add', selectedCategoryInSheet, function(id){ selectedCategoryInSheet = id; });
   openSheet('sheet-add');
-  setTimeout(function(){ document.getElementById('amount-input').focus(); }, 250);
+  if(!editing) setTimeout(function(){ document.getElementById('amount-input').focus(); }, 250);
 }
 
 function saveTransactionFromSheet(){
@@ -533,20 +597,82 @@ function saveTransactionFromSheet(){
   if(!amount || amount <= 0){ toast('Enter a valid amount'); return; }
   const note = document.getElementById('note-input').value.trim();
   const date = document.getElementById('date-input').value || todayISO();
+  const categoryId = txTypeInSheet === 'expense' ? selectedCategoryInSheet : null;
 
-  state.transactions.push({
-    id: uid(),
-    type: txTypeInSheet,
-    amount: amount,
-    categoryId: txTypeInSheet === 'expense' ? selectedCategoryInSheet : null,
-    note: note,
-    date: date,
-    createdAt: Date.now(),
-  });
-  saveState();
-  closeSheet('sheet-add');
-  renderAll();
-  toast(txTypeInSheet === 'expense' ? 'Expense added' : 'Income added');
+  if(editingTxId){
+    const tx = state.transactions.find(function(t){ return t.id === editingTxId; });
+    if(tx){
+      tx.type = txTypeInSheet;
+      tx.amount = amount;
+      tx.categoryId = categoryId;
+      tx.note = note;
+      tx.date = date;
+    }
+    editingTxId = null;
+    saveState();
+    closeSheet('sheet-add');
+    renderAll();
+    toast('Transaction updated');
+  } else {
+    state.transactions.push({
+      id: uid(),
+      type: txTypeInSheet,
+      amount: amount,
+      categoryId: categoryId,
+      note: note,
+      date: date,
+      createdAt: Date.now(),
+    });
+    saveState();
+    closeSheet('sheet-add');
+    renderAll();
+    toast(txTypeInSheet === 'expense' ? 'Expense added' : 'Income added');
+  }
+}
+
+// ---------- Transaction detail (view) sheet ----------
+function openTxDetail(id){
+  const tx = state.transactions.find(function(t){ return t.id === id; });
+  if(!tx) return;
+  viewingTxId = id;
+  const isIncome = tx.type === 'income';
+  const cat = getCategory(tx.categoryId);
+
+  document.getElementById('detail-icon').innerHTML = isIncome ? incomeGlyph() : catGlyph(cat);
+  document.getElementById('detail-icon').style.background = isIncome ? 'rgba(185,212,240,0.18)' : (cat.color + '22');
+
+  const amtEl = document.getElementById('detail-amount');
+  amtEl.textContent = (isIncome ? '+' : '-') + fmtMoney(tx.amount).replace('-','');
+  amtEl.style.color = isIncome ? '#DCEEFF' : '#FFD1D1';
+
+  document.getElementById('detail-type-badge').textContent = isIncome ? 'Income' : 'Expense';
+  document.getElementById('detail-category').textContent = isIncome ? 'Income' : cat.name;
+  document.getElementById('detail-note').textContent = tx.note || '—';
+  document.getElementById('detail-date').textContent =
+    new Date(tx.date + 'T00:00:00').toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+
+  openSheet('sheet-tx-detail');
+}
+
+function editTxFromDetail(){
+  const id = viewingTxId;
+  closeSheet('sheet-tx-detail');
+  if(id) setTimeout(function(){ openAddSheet(id); }, 60);
+}
+
+function deleteTxFromDetail(){
+  const id = viewingTxId;
+  if(!id) return;
+  const tx = state.transactions.find(function(t){ return t.id === id; });
+  const label = tx ? (tx.note || (tx.type==='income' ? 'income' : getCategory(tx.categoryId).name)) : 'this transaction';
+  if(confirm('Delete "' + label + '"? This cannot be undone.')){
+    state.transactions = state.transactions.filter(function(t){ return t.id !== id; });
+    viewingTxId = null;
+    saveState();
+    closeSheet('sheet-tx-detail');
+    renderAll();
+    toast('Transaction deleted');
+  }
 }
 
 // ---------- Income sheet ----------
@@ -643,10 +769,13 @@ function deleteRecurring(){
 }
 
 // ---------- Category sheet ----------
+let sheetCategoryIcon = ICON_CHOICES[0];
+let sheetCategoryColor = COLOR_CHOICES[0];
+
 function buildIconGrid(selectedIcon){
   const el = document.getElementById('icon-grid-category');
-  el.innerHTML = ICON_CHOICES.map(function(ic){
-    return '<button type="button" class="icon-chip '+(ic===selectedIcon?'selected':'')+'" data-icon="'+ic+'">'+ic+'</button>';
+  el.innerHTML = ICON_CHOICES.map(function(key){
+    return '<button type="button" class="icon-chip '+(key===selectedIcon?'selected':'')+'" data-icon="'+key+'">'+svgGlyph(ICON_LIBRARY[key], 'currentColor')+'</button>';
   }).join('');
   Array.from(el.querySelectorAll('.icon-chip')).forEach(function(chip){
     chip.addEventListener('click', function(){
@@ -669,8 +798,6 @@ function buildColorGrid(selectedColor){
     });
   });
 }
-let sheetCategoryIcon = '✦';
-let sheetCategoryColor = '#8B8AA0';
 
 function openCategorySheet(catId){
   editingCategoryId = catId || null;
@@ -678,7 +805,8 @@ function openCategorySheet(catId){
   document.getElementById('category-sheet-title').textContent = cat ? 'Edit category' : 'New category';
   document.getElementById('btn-delete-category').hidden = !cat;
   document.getElementById('category-name-input').value = cat ? cat.name : '';
-  sheetCategoryIcon = cat ? cat.icon : ICON_CHOICES[0];
+  // Prefer an existing icon key; if old emoji data, default to first key.
+  sheetCategoryIcon = (cat && ICON_LIBRARY[cat.icon]) ? cat.icon : ICON_CHOICES[0];
   sheetCategoryColor = cat ? cat.color : COLOR_CHOICES[0];
   buildIconGrid(sheetCategoryIcon);
   buildColorGrid(sheetCategoryColor);
@@ -756,13 +884,11 @@ function resetAllData(){
 // ===================== EVENT WIRING =====================
 
 function wireEvents(){
-  // Bottom nav
   document.querySelectorAll('.nav-btn[data-view]').forEach(function(btn){
     btn.addEventListener('click', function(){ showView(btn.dataset.view); });
   });
-  document.getElementById('btn-open-add').addEventListener('click', openAddSheet);
+  document.getElementById('btn-open-add').addEventListener('click', function(){ openAddSheet(); });
 
-  // Settings nav
   document.getElementById('btn-settings').addEventListener('click', function(){ showView('settings'); });
   document.getElementById('btn-settings-back').addEventListener('click', function(){ showView('home'); });
   document.getElementById('row-budgets').addEventListener('click', function(){ showView('budgets'); });
@@ -774,7 +900,6 @@ function wireEvents(){
   document.getElementById('btn-history-back').addEventListener('click', function(){ showView('home'); });
   document.getElementById('btn-see-all').addEventListener('click', function(){ showView('history'); });
 
-  // Period switch (home)
   document.getElementById('period-switch').addEventListener('click', function(e){
     const pill = e.target.closest('.period-pill');
     if(!pill) return;
@@ -784,28 +909,31 @@ function wireEvents(){
     renderHome();
   });
 
-  // Add transaction sheet
-  document.getElementById('btn-close-add').addEventListener('click', function(){ closeSheet('sheet-add'); });
+  // Add / edit transaction sheet
+  document.getElementById('btn-close-add').addEventListener('click', function(){ editingTxId = null; closeSheet('sheet-add'); });
   document.querySelectorAll('.type-pill').forEach(function(pill){
     pill.addEventListener('click', function(){
       document.querySelectorAll('.type-pill').forEach(function(p){p.classList.remove('active');});
       pill.classList.add('active');
       txTypeInSheet = pill.dataset.type;
       document.getElementById('category-field-group').hidden = (txTypeInSheet === 'income');
+      document.getElementById('amount-stage-label').textContent = txTypeInSheet === 'income' ? 'Income amount' : 'Amount';
     });
   });
   document.getElementById('btn-save-tx').addEventListener('click', saveTransactionFromSheet);
 
-  // Tap a transaction row to delete (simple interaction: confirm + delete)
+  // Tap a transaction -> detail (view / edit / delete)
   document.getElementById('tx-list-home').addEventListener('click', handleTxRowClick);
   document.getElementById('tx-list-full').addEventListener('click', handleTxRowClick);
+  document.getElementById('btn-close-tx-detail').addEventListener('click', function(){ closeSheet('sheet-tx-detail'); });
+  document.getElementById('btn-edit-tx').addEventListener('click', editTxFromDetail);
+  document.getElementById('btn-delete-tx').addEventListener('click', deleteTxFromDetail);
 
   // Income sheet
   document.getElementById('btn-edit-income').addEventListener('click', openIncomeSheet);
   document.getElementById('btn-close-income').addEventListener('click', function(){ closeSheet('sheet-income'); });
   document.getElementById('btn-save-income').addEventListener('click', saveIncome);
 
-  // Currency
   document.getElementById('btn-edit-currency').addEventListener('click', cycleCurrency);
 
   // Budgets
@@ -861,10 +989,8 @@ function wireEvents(){
   });
   document.getElementById('btn-reset').addEventListener('click', resetAllData);
 
-  // Sheet backdrop closes any open sheet
   document.getElementById('sheet-backdrop').addEventListener('click', closeAllSheets);
 
-  // Re-draw chart on resize (orientation change etc)
   window.addEventListener('resize', function(){
     if(currentView === 'home') drawTrendChart();
   });
@@ -873,16 +999,7 @@ function wireEvents(){
 function handleTxRowClick(e){
   const row = e.target.closest('.tx-row');
   if(!row) return;
-  const id = row.dataset.id;
-  const tx = state.transactions.find(function(t){ return t.id === id; });
-  if(!tx) return;
-  const label = tx.note || getCategory(tx.categoryId).name;
-  if(confirm('Delete "' + label + '" (' + fmtMoney(tx.amount) + ')?')){
-    state.transactions = state.transactions.filter(function(t){ return t.id !== id; });
-    saveState();
-    renderAll();
-    toast('Transaction deleted');
-  }
+  openTxDetail(row.dataset.id);
 }
 
 function cycleCurrency(){
@@ -896,11 +1013,19 @@ function cycleCurrency(){
 
 // ===================== INIT =====================
 
+function hideSplash(){
+  const splash = document.getElementById('splash');
+  if(!splash) return;
+  setTimeout(function(){ splash.classList.add('hide'); }, 1700);
+  setTimeout(function(){ if(splash.parentNode) splash.parentNode.removeChild(splash); }, 2350);
+}
+
 function init(){
   applyDueRecurring();
   wireEvents();
   renderAll();
   showView('home');
+  hideSplash();
 
   if('serviceWorker' in navigator && navigator.serviceWorker){
     navigator.serviceWorker.register('sw.js').catch(function(err){

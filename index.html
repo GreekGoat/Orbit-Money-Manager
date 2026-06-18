@@ -14,6 +14,26 @@
 </head>
 <body>
 
+<!-- ===================== INTRO / SPLASH ===================== -->
+<div id="splash">
+  <div class="splash-inner">
+    <svg class="splash-ring" viewBox="0 0 120 120">
+      <defs>
+        <linearGradient id="splashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#B9D4F0"/>
+          <stop offset="55%" stop-color="#3DA9E8"/>
+          <stop offset="100%" stop-color="#1A3A8F"/>
+        </linearGradient>
+      </defs>
+      <circle class="splash-track" cx="60" cy="60" r="50"/>
+      <circle class="splash-arc" cx="60" cy="60" r="50"/>
+      <circle class="splash-dot" cx="60" cy="60" r="5"/>
+    </svg>
+    <div class="splash-word">Orbit</div>
+    <div class="splash-tag">Your money, in focus</div>
+  </div>
+</div>
+
 <div id="app">
 
   <!-- ===================== HOME VIEW ===================== -->
@@ -43,6 +63,10 @@
             <stop offset="0%" stop-color="#B9D4F0"/>
             <stop offset="55%" stop-color="#3DA9E8"/>
             <stop offset="100%" stop-color="#1A3A8F"/>
+          </linearGradient>
+          <linearGradient id="orbitGradientOver" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#FFB3B3"/>
+            <stop offset="100%" stop-color="#E24B4A"/>
           </linearGradient>
           <filter id="orbitGlow" x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="4" result="blur"/>
@@ -220,7 +244,7 @@
       </button>
     </div>
 
-    <p class="version-tag">Orbit · v1.0 · data stays on this device</p>
+    <p class="version-tag">Orbit · v1.1 · data stays on this device</p>
   </section>
 
   <!-- ===================== MANAGE CATEGORIES VIEW ===================== -->
@@ -258,12 +282,12 @@
     </button>
   </nav>
 
-  <!-- ===================== ADD TRANSACTION SHEET ===================== -->
+  <!-- ===================== ADD / EDIT TRANSACTION SHEET ===================== -->
   <div class="sheet-backdrop" id="sheet-backdrop" hidden></div>
   <div class="sheet" id="sheet-add" hidden>
     <div class="sheet-handle"></div>
     <div class="sheet-header">
-      <h3>New transaction</h3>
+      <h3 id="add-sheet-title">New transaction</h3>
       <button class="icon-btn" id="btn-close-add" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
@@ -274,9 +298,13 @@
       <button class="type-pill" data-type="income">Income</button>
     </div>
 
-    <div class="amount-input-wrap">
-      <span class="amount-currency" id="amount-currency-symbol">৳</span>
-      <input type="number" inputmode="decimal" id="amount-input" placeholder="0" class="amount-input">
+    <!-- Enticing amount display -->
+    <div class="amount-stage" id="amount-stage">
+      <span class="amount-stage-label" id="amount-stage-label">Amount</span>
+      <div class="amount-stage-row">
+        <span class="amount-currency" id="amount-currency-symbol">৳</span>
+        <input type="number" inputmode="decimal" id="amount-input" placeholder="0" class="amount-input" autocomplete="off">
+      </div>
     </div>
 
     <div class="field-group" id="category-field-group">
@@ -291,10 +319,56 @@
 
     <div class="field-group">
       <label class="field-label" for="date-input">Date</label>
-      <input type="date" id="date-input" class="text-input">
+      <div class="date-field" id="date-field">
+        <svg class="date-field-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input type="date" id="date-input" class="date-input-field">
+      </div>
     </div>
 
     <button class="primary-btn" id="btn-save-tx">Save transaction</button>
+  </div>
+
+  <!-- ===================== TRANSACTION DETAIL SHEET ===================== -->
+  <div class="sheet" id="sheet-tx-detail" hidden>
+    <div class="sheet-handle"></div>
+    <div class="sheet-header">
+      <h3>Transaction</h3>
+      <button class="icon-btn" id="btn-close-tx-detail" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="detail-hero">
+      <div class="detail-icon" id="detail-icon"><!-- injected --></div>
+      <div class="detail-amount" id="detail-amount">৳0</div>
+      <div class="detail-type-badge" id="detail-type-badge">Expense</div>
+    </div>
+
+    <div class="detail-rows">
+      <div class="detail-row">
+        <span class="detail-row-label">Category</span>
+        <span class="detail-row-value" id="detail-category">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Note</span>
+        <span class="detail-row-value" id="detail-note">—</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-row-label">Date</span>
+        <span class="detail-row-value" id="detail-date">—</span>
+      </div>
+    </div>
+
+    <div class="detail-actions">
+      <button class="ghost-btn full" id="btn-edit-tx">
+        <svg viewBox="0 0 24 24" fill="none" width="17" height="17" style="vertical-align:-3px; margin-right:6px;"><path d="M4 20h4l10.5-10.5a2.1 2.1 0 00-3-3L5 17v3z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        Edit
+      </button>
+      <button class="ghost-btn full danger" id="btn-delete-tx">
+        <svg viewBox="0 0 24 24" fill="none" width="17" height="17" style="vertical-align:-3px; margin-right:6px;"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Delete
+      </button>
+    </div>
   </div>
 
   <!-- ===================== EDIT INCOME SHEET ===================== -->
@@ -306,9 +380,12 @@
         <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
     </div>
-    <div class="amount-input-wrap">
-      <span class="amount-currency" id="income-currency-symbol">৳</span>
-      <input type="number" inputmode="decimal" id="income-input" placeholder="0" class="amount-input">
+    <div class="amount-stage" id="income-amount-stage">
+      <span class="amount-stage-label">Monthly income</span>
+      <div class="amount-stage-row">
+        <span class="amount-currency" id="income-currency-symbol">৳</span>
+        <input type="number" inputmode="decimal" id="income-input" placeholder="0" class="amount-input" autocomplete="off">
+      </div>
     </div>
     <p class="screen-sub">This is your baseline. Each expense reduces what's left in real time; each income entry adds to it.</p>
     <button class="primary-btn" id="btn-save-income">Save</button>

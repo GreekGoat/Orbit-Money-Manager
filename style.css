@@ -176,14 +176,14 @@ body{
 }
 .orbit-center{
   position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
-  text-align:center; padding: 0 30px;
+  text-align:center; padding: 0 24px; overflow:hidden;
 }
-.orbit-label{ font-size:12px; color: var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; }
+.orbit-label{ font-size:12px; color: var(--text-dim); font-weight:600; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap; max-width:100%; }
 .orbit-amount{
-  font-family: var(--font-display); font-weight:700; font-size:34px; letter-spacing:-0.02em;
-  margin-top:6px; color: var(--text);
+  font-family: var(--font-display); font-weight:700; font-size: clamp(21px, 7.6vw, 34px); letter-spacing:-0.02em;
+  margin-top:6px; color: var(--text); white-space:nowrap; max-width:100%;
 }
-.orbit-sub{ font-size:12px; color: var(--text-faint); margin-top:4px; }
+.orbit-sub{ font-size:12px; color: var(--text-faint); margin-top:4px; white-space:nowrap; max-width:100%; overflow:hidden; text-overflow:ellipsis; }
 
 /* ---------- Stat row ---------- */
 .stat-row{ display:flex; gap:10px; margin-bottom:26px; }
@@ -237,8 +237,8 @@ body{
 }
 .cat-icon{
   width:38px; height:38px; border-radius:12px; flex-shrink:0;
-  display:flex; align-items:center; justify-content:center; font-size:18px;
-  background: rgba(255,255,255,0.18) !important;
+  display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,0.16);
 }
 .cat-info{ flex:1; min-width:0; }
 .cat-name-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px; }
@@ -496,7 +496,7 @@ body{
   padding:12px 4px; border-radius: var(--radius-sm); background: rgba(255,255,255,0.10);
   border:1.5px solid transparent; font-size:11px; font-weight:600; color: var(--text-dim);
 }
-.category-chip .cc-icon{ width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; background: rgba(255,255,255,0.18) !important; }
+.category-chip .cc-icon{ width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; background: rgba(255,255,255,0.16); }
 .category-chip.selected{ border-color: rgba(255,255,255,0.7); color: var(--text); background: rgba(255,255,255,0.18); }
 
 .icon-grid{ display:grid; grid-template-columns: repeat(6, 1fr); gap:8px; }
@@ -536,6 +536,166 @@ body{
 }
 .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
 
+/* ===================== v1.1 — intro, enticing inputs, tx detail, overspend ===================== */
+
+/* ---------- Intro / splash ---------- */
+#splash{
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; align-items: center; justify-content: center;
+  background:
+    var(--bg-glow-1), var(--bg-glow-2), var(--bg-glow-3), var(--bg-glow-4), var(--bg-deep);
+  transition: opacity .55s ease, transform .55s ease;
+}
+#splash.hide{ opacity: 0; transform: scale(1.05); pointer-events: none; }
+.splash-inner{ display: flex; flex-direction: column; align-items: center; }
+.splash-ring{
+  width: 116px; height: 116px; transform: rotate(-90deg);
+  animation: splashSpin 1.4s cubic-bezier(.22,1,.36,1);
+}
+.splash-track{ fill: none; stroke: rgba(255,255,255,0.14); stroke-width: 7; }
+.splash-arc{
+  fill: none; stroke: url(#splashGrad); stroke-width: 7; stroke-linecap: round;
+  stroke-dasharray: 314; stroke-dashoffset: 314;
+  animation: splashDraw 1.2s cubic-bezier(.22,1,.36,1) .05s forwards;
+}
+.splash-dot{
+  fill: #EAF3FF; transform-box: fill-box; transform-origin: center;
+  filter: drop-shadow(0 0 7px rgba(185,212,240,0.95));
+  animation: splashPulse 1.5s ease;
+}
+@keyframes splashSpin{ from{ transform: rotate(-170deg); opacity: .35; } to{ transform: rotate(-90deg); opacity: 1; } }
+@keyframes splashDraw{ to{ stroke-dashoffset: 66; } }
+@keyframes splashPulse{ 0%{ transform: scale(0); } 55%{ transform: scale(1.3); } 100%{ transform: scale(1); } }
+.splash-word{
+  font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em;
+  color: var(--text); margin-top: 24px; opacity: 0;
+  animation: splashFadeUp .6s ease .4s forwards;
+}
+.splash-tag{
+  font-size: 13px; color: var(--text-dim); margin-top: 7px; opacity: 0;
+  animation: splashFadeUp .6s ease .58s forwards;
+}
+@keyframes splashFadeUp{ from{ opacity: 0; transform: translateY(9px); } to{ opacity: 1; transform: translateY(0); } }
+
+/* ---------- Glyph (modern line icons) ---------- */
+.glyph{ width: 22px; height: 22px; display: block; }
+.cat-icon .glyph{ width: 21px; height: 21px; }
+.category-chip .cc-icon .glyph{ width: 18px; height: 18px; }
+.icon-chip .glyph{ width: 21px; height: 21px; }
+.detail-icon .glyph{ width: 30px; height: 30px; }
+.legacy-emoji{ font-size: 18px; line-height: 1; }
+
+/* ---------- Enticing amount stage (add + income sheets) ---------- */
+.amount-stage{
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  padding: 22px 18px 24px; margin-bottom: 22px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+  border: 0.5px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow-soft);
+  transition: border-color .2s, box-shadow .2s;
+}
+.amount-stage:focus-within{
+  border-color: rgba(185,212,240,0.75);
+  box-shadow: 0 0 0 3px rgba(61,169,232,0.20), var(--glass-highlight);
+}
+.amount-stage-label{
+  font-size: 11px; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase;
+  color: var(--blue-100);
+}
+.amount-stage-row{ display: flex; align-items: baseline; justify-content: center; gap: 6px; max-width: 100%; }
+.amount-stage .amount-currency{ font-size: 30px; font-weight: 600; color: var(--blue-100); }
+.amount-stage .amount-input{
+  font-size: 50px; line-height: 1.05; width: auto; max-width: 230px; text-align: left;
+  caret-color: var(--blue-100);
+}
+.amount-input::-webkit-outer-spin-button,
+.amount-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+
+/* ---------- Date field (aligned) ---------- */
+.date-field{
+  display: flex; align-items: center; gap: 10px;
+  height: 50px; padding: 0 12px 0 14px;
+  background: rgba(255,255,255,0.12);
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  transition: border-color .15s;
+}
+.date-field:focus-within{ border-color: rgba(255,255,255,0.5); }
+.date-field-icon{ width: 18px; height: 18px; color: var(--text-faint); flex-shrink: 0; }
+.date-input-field{
+  flex: 1; min-width: 0; height: 100%; padding: 0;
+  background: none; border: none; color: var(--text);
+  font-family: var(--font-text); font-size: 15px;
+}
+.date-input-field:focus{ outline: none; }
+/* iOS Safari renders a date's value through this pseudo-element and centres it by
+   default, which is the misalignment being fixed — force it to the left. */
+.date-input-field::-webkit-date-and-time-value{ text-align: left; margin: 0; }
+.date-input-field::-webkit-datetime-edit{ text-align: left; padding: 0; }
+.date-input-field::-webkit-calendar-picker-indicator{ margin-left: auto; filter: invert(1) brightness(1.6); }
+
+/* ---------- Transaction detail sheet ---------- */
+.detail-hero{ display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 4px 0 22px; }
+.detail-icon{
+  width: 64px; height: 64px; border-radius: 20px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.16);
+  border: 0.5px solid var(--glass-border);
+}
+.detail-amount{ font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: -0.02em; }
+.detail-type-badge{
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 4px 12px; border-radius: 8px;
+  background: rgba(255,255,255,0.14); color: var(--text-dim);
+}
+.detail-rows{
+  background: rgba(255,255,255,0.07);
+  border: 0.5px solid var(--glass-border);
+  border-radius: var(--radius-md); overflow: hidden; margin-bottom: 18px;
+}
+.detail-row{
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 14px 16px; border-bottom: 0.5px solid rgba(255,255,255,0.12);
+}
+.detail-row:last-child{ border-bottom: none; }
+.detail-row-label{ font-size: 13px; color: var(--text-faint); flex-shrink: 0; }
+.detail-row-value{ font-size: 14px; font-weight: 600; color: var(--text); text-align: right; word-break: break-word; }
+.detail-actions{ display: flex; gap: 10px; }
+.detail-actions .ghost-btn{ flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.detail-actions .ghost-btn.full{ width: auto; margin-top: 0; }
+
+/* ---------- Overspend state (ring turns red) ---------- */
+.orbit-fill.over{ stroke: url(#orbitGradientOver); }
+.orbit-amount.over{ color: var(--danger); }
+.orbit-wrap.over{
+  border-color: rgba(255,138,138,0.45);
+  box-shadow: 0 0 0 1px rgba(255,138,138,0.22), 0 6px 22px rgba(60,14,22,0.40), var(--glass-highlight);
+}
+
+/* ---------- Numeric font consistency (match the orbit "Remaining this month") ---------- */
+.stat-value, .tx-amount, .cat-amount, .budget-amounts, .budget-amounts strong,
+.recurring-amount, .settings-value, .detail-amount, .amount-input,
+.orbit-amount, .orbit-sub{
+  font-family: var(--font-display);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ---------- Responsive (small phones) — add-transaction & sheets ---------- */
+.category-chip > span:last-child{ max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px){
+  .sheet{ padding-left: 16px; padding-right: 16px; }
+  .category-grid{ grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .icon-grid{ grid-template-columns: repeat(5, 1fr); }
+  .amount-stage{ padding: 18px 14px 20px; }
+  .amount-stage .amount-input{ font-size: 42px; max-width: 190px; }
+  .amount-stage .amount-currency{ font-size: 26px; }
+  .detail-amount{ font-size: 34px; }
+  .stat-card{ padding: 12px 10px; }
+  .stat-value{ font-size: 15px; }
+}
+
 /* ---------- Misc ---------- */
 [hidden]{ display:none !important; }
 button{ cursor:pointer; -webkit-appearance:none; appearance:none; }
@@ -550,7 +710,8 @@ input[type=date]::-webkit-calendar-picker-indicator{ filter: invert(1) brightnes
   .icon-btn, .period-switch, .orbit-wrap, .stat-card, .chart-card, .category-row,
   .tx-row, .empty-icon, .search-bar, .filter-chip, .settings-group, .ghost-btn,
   .budget-card, .recurring-card, .category-manage-row, .bottom-nav, .sheet, .toast,
-  .category-chip, .icon-chip, .text-input, .type-switch{
+  .category-chip, .icon-chip, .text-input, .type-switch,
+  .amount-stage, .date-field, .detail-rows, .detail-icon{
     -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
     background: var(--blue-700) !important;
