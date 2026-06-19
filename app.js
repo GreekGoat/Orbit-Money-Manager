@@ -28,6 +28,23 @@ const ICON_LIBRARY = {
 };
 
 const ICON_CHOICES = ['food','transport','bills','shopping','entertainment','health','education','home','travel','music','pets','work','gift','coffee','fitness','phone','wallet','globe','star','other'];
+
+// ---------- Avatar icons (human + animal, used for profile pictures) ----------
+const AVATAR_ICON_LIBRARY = {
+  person:  '<circle cx="12" cy="8" r="3.6"/><path d="M5.5 19.5c0-3.6 2.9-6.4 6.5-6.4s6.5 2.8 6.5 6.4"/>',
+  people:  '<circle cx="8.5" cy="8" r="2.8"/><path d="M4 19c0-2.9 2-5 4.5-5s4.5 2.1 4.5 5"/><circle cx="16.5" cy="10" r="2.2"/><path d="M13 19c0-2.4 1.6-4 3.5-4s3.5 1.6 3.5 4"/>',
+  smiley:  '<circle cx="12" cy="12" r="8.4"/><circle cx="9" cy="10.4" r=".6"/><circle cx="15" cy="10.4" r=".6"/><path d="M8.4 14.4c.9 1.4 2.1 2.1 3.6 2.1s2.7-.7 3.6-2.1"/>',
+  cat:     '<path d="M7.6 8 6.1 4.2l3.4 1.9"/><path d="M16.4 8 17.9 4.2l-3.4 1.9"/><circle cx="12" cy="13" r="6.1"/><circle cx="9.8" cy="12.3" r=".55"/><circle cx="14.2" cy="12.3" r=".55"/><path d="M12 14.1v1.1"/><path d="M12 15.2l-1.5.7M12 15.2l1.5.7"/><path d="M5.8 12.8H8M16 12.8h2.2"/>',
+  dog:     '<path d="M8 8.4C5.7 7.9 4.1 9.4 4.1 11.9c0 2.4 1.5 4.1 3.7 4.3"/><path d="M16 8.4c2.3-.5 3.9 1 3.9 3.5 0 2.4-1.5 4.1-3.7 4.3"/><path d="M7.2 9.6a4.8 4.8 0 019.6 0v2a4.8 4.8 0 01-9.6 0z"/><circle cx="10" cy="11.4" r=".5"/><circle cx="14" cy="11.4" r=".5"/><path d="M10.5 14.4h3M12 13.2v1.4"/>',
+  rabbit:  '<path d="M9.2 9C8.2 6 8.4 3.3 9.8 3.3S11.4 6 10.7 9"/><path d="M14.8 9c1-3 .8-5.7-.6-5.7S12.6 6 13.3 9"/><circle cx="12" cy="14" r="5.1"/><circle cx="10.2" cy="13.4" r=".55"/><circle cx="13.8" cy="13.4" r=".55"/><path d="M12 15v1M12 16l-1.2.6M12 16l1.2.6"/>',
+  fox:     '<path d="M4.2 5.2 7.6 7.6M19.8 5.2 16.4 7.6"/><path d="M5.4 6.6S7.4 8 12 8s6.6-1.4 6.6-1.4c.9 3.8-1.4 7.2-2.9 8.7-1 1-2 1.7-3.7 1.7s-2.7-.7-3.7-1.7c-1.5-1.5-3.8-4.9-2.9-8.7z"/><circle cx="9.9" cy="11" r=".55"/><circle cx="14.1" cy="11" r=".55"/><path d="M12 13v1.3l-1 .8M12 14.3l1 .8"/>',
+  bear:    '<circle cx="6.8" cy="7.6" r="2.3"/><circle cx="17.2" cy="7.6" r="2.3"/><circle cx="12" cy="13" r="6.2"/><circle cx="9.9" cy="12" r=".55"/><circle cx="14.1" cy="12" r=".55"/><circle cx="12" cy="14.2" r="1.3"/>',
+  owl:     '<path d="M5.2 6 7.6 8M18.8 6 16.4 8"/><path d="M12 4c-3.9 0-6.4 3-6.4 7s2.5 8 6.4 8 6.4-4 6.4-8S15.9 4 12 4z"/><circle cx="9.4" cy="11" r="1.9"/><circle cx="14.6" cy="11" r="1.9"/><path d="M11 14.4l1 1 1-1"/>',
+  fish:    '<path d="M3 12c2.5-3.4 6-5 9-5s5.4 1.4 7 3l-1.6 2 1.6 2c-1.6 1.6-4 3-7 3s-6.5-1.6-9-5z"/><path d="M19 9l2-1.5v9L19 15"/><circle cx="8" cy="11" r=".6"/>',
+  penguin: '<path d="M12 3c-3 0-5 2.2-5 6v6c0 3 2 5 5 5s5-2 5-5V9c0-3.8-2-6-5-6z"/><path d="M9.6 9.6c0 1.9 1 2.9 2.4 2.9s2.4-1 2.4-2.9"/><circle cx="10.3" cy="8" r=".55"/><circle cx="13.7" cy="8" r=".55"/><path d="M11.2 9.7l.8.9.8-.9"/><path d="M7.4 15c-2 .5-3.4 2-3.4 4M16.6 15c2 .5 3.4 2 3.4 4"/>',
+  paw:     '<ellipse cx="7" cy="10" rx="1.4" ry="1.9"/><ellipse cx="10.6" cy="8.2" rx="1.5" ry="2.1"/><ellipse cx="13.4" cy="8.2" rx="1.5" ry="2.1"/><ellipse cx="17" cy="10" rx="1.4" ry="1.9"/><path d="M12 13.4c2.8 0 5 1.8 5 4 0 1.6-1.3 2.5-3 2.5-1.1 0-1.4-.4-2-.4s-.9.4-2 .4c-1.7 0-3-.9-3-2.5 0-2.2 2.2-4 5-4z"/>'
+};
+const AVATAR_ICONS = ['person','people','smiley','cat','dog','rabbit','fox','bear','owl','fish','penguin','paw'];
 const COLOR_CHOICES = ['#F0997B','#5B9CFF','#FFC857','#ED93B1','#A78BFA','#5DCAA5','#85B7EB','#9FB0C4','#FF8A8A','#5B6EF5','#3DDC97','#FFD23F'];
 
 const DEFAULT_CATEGORIES = [
@@ -1189,7 +1206,8 @@ function avatarMarkup(profile){
   }
   if(p.avatar && p.avatar.indexOf('icon:') === 0){
     const key = p.avatar.slice(5);
-    if(ICON_LIBRARY[key]) return svgGlyph(ICON_LIBRARY[key], '#EAF3FF');
+    const inner = AVATAR_ICON_LIBRARY[key] || ICON_LIBRARY[key];
+    if(inner) return svgGlyph(inner, '#EAF3FF');
   }
   const name = (p.name || '').trim();
   if(name){
@@ -1361,8 +1379,8 @@ function renderObAvatar(){
 }
 function buildObIconGrid(){
   const el = document.getElementById('ob-icon-grid');
-  el.innerHTML = ICON_CHOICES.map(function(key){
-    return '<button type="button" class="icon-chip" data-icon="' + key + '">' + svgGlyph(ICON_LIBRARY[key], 'currentColor') + '</button>';
+  el.innerHTML = AVATAR_ICONS.map(function(key){
+    return '<button type="button" class="icon-chip" data-icon="' + key + '">' + svgGlyph(AVATAR_ICON_LIBRARY[key], 'currentColor') + '</button>';
   }).join('');
   Array.from(el.querySelectorAll('.icon-chip')).forEach(function(chip){
     chip.addEventListener('click', function(){
@@ -1390,8 +1408,8 @@ function renderProfileSheetAvatar(){
 }
 function buildProfileIconGrid(){
   const el = document.getElementById('profile-icon-grid');
-  el.innerHTML = ICON_CHOICES.map(function(key){
-    return '<button type="button" class="icon-chip" data-icon="' + key + '">' + svgGlyph(ICON_LIBRARY[key], 'currentColor') + '</button>';
+  el.innerHTML = AVATAR_ICONS.map(function(key){
+    return '<button type="button" class="icon-chip" data-icon="' + key + '">' + svgGlyph(AVATAR_ICON_LIBRARY[key], 'currentColor') + '</button>';
   }).join('');
   Array.from(el.querySelectorAll('.icon-chip')).forEach(function(chip){
     chip.addEventListener('click', function(){
