@@ -244,6 +244,263 @@ let editingCategoryId = null;
 let historyFilter = 'all';
 let historySearch = '';
 
+// ===================== v3: MOTION + DERIVED FEATURES =====================
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+function easeOutCubic(p){ return 1 - Math.pow(1 - p, 3); }
+
+// Count-up number animation. Remembers the previous value per element so
+// changes tick smoothly from old → new. Instant under reduced motion.
+function animateNumber(el, to, fmt){
+  if(!el) return;
+  const format = fmt || fmtMoney;
+  const from = (typeof el.__num === 'number') ? el.__num : 0;
+  el.__num = to;
+  if(REDUCED_MOTION || from === to){ el.textContent = format(to); return; }
+  if(el.__raf) cancelAnimationFrame(el.__raf);
+  const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const dur = 620;
+  function step(ts){
+    const nowT = (typeof ts === 'number' && ts > 0) ? ts : Date.now();
+    let p = Math.min(1, (nowT - t0) / dur);
+    if(!(p >= 0)) p = 1;
+    const v = from + (to - from) * easeOutCubic(p);
+    el.textContent = format(p >= 1 ? to : v);
+    if(p < 1){ el.__raf = requestAnimationFrame(step); } else { el.__raf = 0; }
+  }
+  el.__raf = requestAnimationFrame(step);
+}
+
+// ---------- Cumulative savings (month-by-month) ----------
+function ymKey(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
+function ymLabel(ym){
+  const parts = ym.split('-');
+  const d = new Date(parseInt(parts[0],10), parseInt(parts[1],10)-1, 1);
+  return d.toLocaleDateString('en-US', { month:'short', year:'numeric' });
+}
+function computeSavingsSeries(){
+  const now = new Date();
+  const currentYm = ymKey(now);
+  if(state.transactions.length === 0){
+    if(state.monthlyIncomeBase > 0){
+      const inc = monthIncomeTotal();
+      const sp = monthSpentTotal();
+      return [{ ym: currentYm, label: ymLabel(currentYm), income: inc, spent: sp, saved: inc - sp, cum: inc - sp }];
+    }
+    return [];
+  }
+  // group transactions by month
+  const byMonth = {};
+  state.transactions.forEach(function(t){
+    const ym = (t.date || '').slice(0,7);
+    if(!ym) return;
+    if(!byMonth[ym]) byMonth[ym] = { income: 0, spent: 0, count: 0 };
+    byMonth[ym].count++;
+    if(t.type === 'income') byMonth[ym].income += t.amount;
+    else byMonth[ym].spent += t.amount;
+  });
+  const firstYm = Object.keys(byMonth).sort()[0];
+  const series = [];
+  let cum = 0;
+  // walk month by month from the first active month through the current one
+  let cursor = new Date(parseInt(firstYm.slice(0,4),10), parseInt(firstYm.slice(5,7),10)-1, 1);
+  const endCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+  let guard = 0;
+  while(cursor <= endCursor && guard < 240){
+    guard++;
+    const ym = ymKey(cursor);
+    const m = byMonth[ym];
+    const isCurrent = ym === currentYm;
+    if(m || isCurrent){
+      const income = state.monthlyIncomeBase + (m ? m.income : 0);
+      const spent = m ? m.spent : 0;
+      const saved = income - spent;
+      cum += saved;
+      series.push({ ym: ym, label: ymLabel(ym), income: income, spent: spent, saved: saved, cum: cum });
+    }
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1);
+  }
+  return series;
+}
+
+function renderSavingsCard(){
+  const card = document.getElementById('savings-card');
+  if(!card) return;
+  const series = computeSavingsSeries();
+  if(series.length === 0){ card.hidden = true; return; }
+  const total = series[series.length-1].cum;
+  card.hidden = false;
+  animateNumber(document.getElementById('savings-total'), total);
+  const sinceEl = document.getElementById('savings-since');
+  if(sinceEl){
+    sinceEl.textContent = series.length > 1
+      ? 'since ' + series[0].label + ' · tap for monthly history'
+      : 'this month so far · tap for details';
+  }
+  const totEl = document.getElementById('savings-total');
+  if(totEl) totEl.classList.toggle('neg', total < 0);
+}
+
+function openSavingsSheet(){
+  const series = computeSavingsSeries();
+  const sum = document.getElementById('savings-summary');
+  const list = document.getElementById('savings-history');
+  if(series.length === 0){
+    sum.innerHTML = '';
+    list.innerHTML = '<p style="color:var(--text-faint); font-size:13px; text-align:center; padding:16px 0;">Nothing here yet — add some transactions first.</p>';
+  } else {
+    const total = series[series.length-1].cum;
+    const best = series.slice().sort(function(a,b){ return b.saved - a.saved; })[0];
+    sum.innerHTML =
+      '<div class="savings-sum-item"><span class="savings-sum-label">Total saved</span><span class="savings-sum-value '+(total<0?'neg':'')+'">'+fmtMoney(total)+'</span></div>' +
+      '<div class="savings-sum-item"><span class="savings-sum-label">Best month</span><span class="savings-sum-value">'+escapeHtml(best.label)+'</span></div>';
+    list.innerHTML = series.slice().reverse().map(function(row, i){
+      const cls = row.saved >= 0 ? 'pos' : 'neg';
+      return '<div class="savings-row anim-in" style="--i:'+Math.min(i,12)+'">' +
+        '<div class="savings-row-info"><span class="savings-row-month">'+escapeHtml(row.label)+'</span>' +
+        '<span class="savings-row-meta">in '+fmtMoney(row.income)+' · out '+fmtMoney(row.spent)+'</span></div>' +
+        '<div class="savings-row-amts"><span class="savings-row-saved '+cls+'">'+(row.saved>=0?'+':'')+fmtMoney(row.saved)+'</span>' +
+        '<span class="savings-row-cum">total '+fmtMoney(row.cum)+'</span></div></div>';
+    }).join('');
+  }
+  openSheet('sheet-savings');
+}
+
+// ---------- Insights ----------
+function computeInsights(){
+  const now = new Date();
+  const lastRef = new Date(now.getFullYear(), now.getMonth()-1, 15);
+  const thisSpent = monthSpentTotal(now);
+  const lastSpent = monthSpentTotal(lastRef);
+  const { start, end } = getRangeForPeriod('month', now);
+  const monthExp = txInRange(start, end).filter(function(t){ return t.type === 'expense'; });
+  let top = null;
+  if(monthExp.length){
+    const byCat = {};
+    monthExp.forEach(function(t){ byCat[t.categoryId] = (byCat[t.categoryId]||0) + t.amount; });
+    const sorted = Object.entries(byCat).sort(function(a,b){ return b[1]-a[1]; });
+    top = { cat: getCategory(sorted[0][0]), amt: sorted[0][1] };
+  }
+  let biggest = null;
+  monthExp.forEach(function(t){ if(!biggest || t.amount > biggest.amount) biggest = t; });
+  const dailyAvg = thisSpent / Math.max(1, now.getDate());
+  return { thisSpent: thisSpent, lastSpent: lastSpent, top: top, biggest: biggest, dailyAvg: dailyAvg };
+}
+
+function renderInsights(){
+  const wrap = document.getElementById('insights-wrap');
+  const card = document.getElementById('insights-card');
+  if(!wrap || !card) return;
+  const ins = computeInsights();
+  if(ins.thisSpent <= 0 && ins.lastSpent <= 0){ wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const rows = [];
+  if(ins.lastSpent > 0){
+    const diff = ins.thisSpent - ins.lastSpent;
+    const pct = Math.round(Math.abs(diff) / ins.lastSpent * 100);
+    if(pct === 0){
+      rows.push({ icon: '<path d="M5 12h14"/>', text: 'Spending is level with last month.' });
+    } else if(diff < 0){
+      rows.push({ icon: '<path d="M4 7l6 6 4-4 6 6"/><path d="M20 10v5h-5"/>', text: '<strong>' + pct + '% less</strong> spent than last month. Nice.', cls: 'good' });
+    } else {
+      rows.push({ icon: '<path d="M4 17l6-6 4 4 6-6"/><path d="M20 14V9h-5"/>', text: '<strong>' + pct + '% more</strong> spent than last month.', cls: 'warn' });
+    }
+  }
+  if(ins.top){
+    rows.push({ icon: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/>', text: 'Top category: <strong>' + escapeHtml(ins.top.cat.name) + '</strong> at ' + fmtMoney(ins.top.amt) + '.' });
+  }
+  if(ins.biggest){
+    rows.push({ icon: '<path d="M12 3v18M6 8.5C6 6.6 7.8 5.5 12 5.5s6 1.1 6 3-1.9 2.6-6 3.4-6 1.5-6 3.4 1.8 3 6 3 6-1.1 6-3"/>', text: 'Biggest expense: <strong>' + escapeHtml(ins.biggest.note || getCategory(ins.biggest.categoryId).name) + '</strong> · ' + fmtMoney(ins.biggest.amount) + '.' });
+  }
+  if(ins.thisSpent > 0){
+    rows.push({ icon: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 9h16M9 3v4M15 3v4"/>', text: 'Daily average this month: ' + fmtMoney(Math.round(ins.dailyAvg)) + '.' });
+  }
+  card.innerHTML = rows.map(function(r, i){
+    return '<div class="insight-row anim-in '+(r.cls||'')+'" style="--i:'+i+'">' +
+      '<span class="insight-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+r.icon+'</svg></span>' +
+      '<span class="insight-text">'+r.text+'</span></div>';
+  }).join('');
+}
+
+// ---------- Budget date-range filter ----------
+let budgetRangePreset = 'this-month';
+let budgetCustomFrom = '';
+let budgetCustomTo = '';
+
+function monthsBetweenInclusive(a, b){
+  return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth()) + 1;
+}
+function getBudgetFilterRange(){
+  const now = new Date();
+  if(budgetRangePreset === 'last-month'){
+    const start = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 1);
+    return { start: start, end: end, months: 1, label: 'Last month (' + start.toLocaleDateString('en-US',{month:'long'}) + ')' };
+  }
+  if(budgetRangePreset === 'last-3'){
+    const start = new Date(now.getFullYear(), now.getMonth()-2, 1);
+    const end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    return { start: start, end: end, months: 3, label: 'Last 3 months' };
+  }
+  if(budgetRangePreset === 'this-year'){
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+    return { start: start, end: end, months: now.getMonth()+1, label: 'This year so far' };
+  }
+  if(budgetRangePreset === 'custom' && budgetCustomFrom && budgetCustomTo){
+    let from = new Date(budgetCustomFrom + 'T00:00:00');
+    let to = new Date(budgetCustomTo + 'T00:00:00');
+    if(!isNaN(from) && !isNaN(to)){
+      if(from > to){ const tmp = from; from = to; to = tmp; }
+      const end = new Date(to.getFullYear(), to.getMonth(), to.getDate()+1);
+      const months = Math.max(1, monthsBetweenInclusive(from, to));
+      const opts = { month:'short', day:'numeric' };
+      return { start: from, end: end, months: months,
+        label: from.toLocaleDateString('en-US',opts) + ' – ' + to.toLocaleDateString('en-US',opts) };
+    }
+  }
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth()+1, 1);
+  return { start: start, end: end, months: 1, label: 'This month' };
+}
+
+// ---------- CSV export ----------
+function csvCell(v){
+  const s = String(v == null ? '' : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function buildCsv(){
+  const header = ['Date','Time','Type','Category','Amount','Currency','Note'];
+  const rows = state.transactions.slice().sort(function(a,b){
+    return (a.date + (a.time||'')) < (b.date + (b.time||'')) ? -1 : 1;
+  }).map(function(t){
+    const cat = t.type === 'income' ? 'Income' : getCategory(t.categoryId).name;
+    return [t.date, txTime(t), t.type, cat, t.amount, state.currency, t.note || ''].map(csvCell).join(',');
+  });
+  return header.join(',') + '\n' + rows.join('\n');
+}
+function exportCsv(){
+  if(state.transactions.length === 0){ toast('No transactions to export yet'); return; }
+  const blob = new Blob([buildCsv()], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'orbit-transactions-' + todayISO() + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('CSV downloaded');
+}
+
+// ---------- Over-budget nudge ----------
+function spentThisMonthFor(categoryId){
+  const { start, end } = getRangeForPeriod('month');
+  return txInRange(start, end)
+    .filter(function(t){ return t.type === 'expense' && t.categoryId === categoryId; })
+    .reduce(function(s,t){ return s + t.amount; }, 0);
+}
+
 function renderAll(){
   renderCurrencySymbols();
   renderProfile();
@@ -271,14 +528,14 @@ function renderHome(){
   const saved = Math.max(remaining, 0);
   const over = income > 0 && remaining < 0;
 
-  document.getElementById('stat-income').textContent = fmtMoney(income);
-  document.getElementById('stat-spent').textContent = fmtMoney(spent);
-  document.getElementById('stat-saved').textContent = fmtMoney(saved);
+  animateNumber(document.getElementById('stat-income'), income);
+  animateNumber(document.getElementById('stat-spent'), spent);
+  animateNumber(document.getElementById('stat-saved'), saved);
 
   const labelEl = document.getElementById('orbit-label');
   const amtEl = document.getElementById('orbit-amount');
   labelEl.textContent = over ? 'Overspent by' : 'Remaining this month';
-  amtEl.textContent = over ? fmtMoney(Math.abs(remaining)) : fmtMoney(remaining);
+  animateNumber(amtEl, over ? Math.abs(remaining) : remaining);
   amtEl.classList.toggle('over', over);
   document.getElementById('orbit-sub').textContent = 'of ' + fmtMoney(income) + ' income';
 
@@ -307,10 +564,11 @@ function renderHome(){
   if(sorted.length === 0){
     catContainer.innerHTML = '<p style="color:var(--text-faint); font-size:13px; text-align:center; padding:20px 0;">No spending in this period yet.</p>';
   } else {
-    catContainer.innerHTML = sorted.map(([catId, amt])=>{
+    catContainer.innerHTML = sorted.map(function(entry, i){
+      const catId = entry[0], amt = entry[1];
       const cat = getCategory(catId);
       const pctOfTotal = totalSpentPeriod>0 ? Math.round((amt/totalSpentPeriod)*100) : 0;
-      return '<div class="category-row">' +
+      return '<div class="category-row anim-in" style="--i:'+Math.min(i,12)+'">' +
         '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<div class="cat-info">' +
           '<div class="cat-name-row"><span class="cat-name">'+escapeHtml(cat.name)+'</span><span class="cat-amount">'+fmtMoney(amt)+' · '+pctOfTotal+'%</span></div>' +
@@ -324,9 +582,10 @@ function renderHome(){
   document.getElementById('home-empty').hidden = state.transactions.length > 0;
 
   drawDonutChart(sorted, totalSpentPeriod);
-  const donutTotalEl = document.getElementById('donut-total');
-  if(donutTotalEl) donutTotalEl.textContent = fmtMoney(totalSpentPeriod);
+  animateNumber(document.getElementById('donut-total'), totalSpentPeriod);
   renderGoalStrip(saved);
+  renderSavingsCard();
+  renderInsights();
   drawTrendChart();
 }
 
@@ -336,14 +595,15 @@ function escapeHtml(s){
   });
 }
 
-function renderTxRow(t){
+function renderTxRow(t, i){
   const isIncome = t.type === 'income';
   const cat = getCategory(t.categoryId);
   const sign = isIncome ? '+' : '-';
   const dateLabel = formatDateLabel(t.date);
   const iconBg = isIncome ? 'rgba(185,212,240,0.18)' : (cat.color + '22');
   const glyph = isIncome ? incomeGlyph() : catGlyph(cat);
-  return '<div class="tx-row" data-id="'+t.id+'">' +
+  const stagger = (typeof i === 'number') ? ' anim-in" style="--i:' + Math.min(i, 12) + '"' : '"';
+  return '<div class="tx-row' + stagger + ' data-id="'+t.id+'">' +
     '<div class="cat-icon" style="background:'+iconBg+';">'+glyph+'</div>' +
     '<div class="tx-info">' +
       '<div class="tx-note">'+escapeHtml(t.note || (isIncome ? 'Income' : cat.name))+'</div>' +
@@ -406,8 +666,23 @@ function computeTrendBuckets(){
   return buckets;
 }
 
-// ---------- Trend chart: smooth area / line ("uphill") ----------
+// ---------- Trend chart: smooth area / line ("uphill"), animated reveal ----------
+let trendRafId = 0;
 function drawTrendChart(){
+  if(trendRafId) cancelAnimationFrame(trendRafId);
+  if(REDUCED_MOTION){ drawTrendFrame(1); return; }
+  const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const dur = 650;
+  function step(ts){
+    const nowT = (typeof ts === 'number' && ts > 0) ? ts : Date.now();
+    let p = Math.min(1, (nowT - t0) / dur);
+    if(!(p >= 0)) p = 1;
+    drawTrendFrame(easeOutCubic(p));
+    if(p < 1){ trendRafId = requestAnimationFrame(step); } else { trendRafId = 0; }
+  }
+  trendRafId = requestAnimationFrame(step);
+}
+function drawTrendFrame(progress){
   const canvas = document.getElementById('chart-trend');
   if(!canvas) return;
   const dpr = window.devicePixelRatio || 1;
@@ -444,7 +719,20 @@ function drawTrendChart(){
     }
   }
 
-  // area fill
+  // labels are always fully visible
+  ctx.font = '11px -apple-system, sans-serif';
+  ctx.textAlign = 'center';
+  pts.forEach(function(pt){
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.fillText(pt.label, pt.x, h - 7);
+  });
+
+  // clip to reveal the line/area left→right
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, padL + (w - padL - padR) * progress + 8, h - padBottom + 4);
+  ctx.clip();
+
   const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop+chartH);
   areaGrad.addColorStop(0, 'rgba(94,170,235,0.42)');
   areaGrad.addColorStop(1, 'rgba(94,170,235,0.02)');
@@ -455,7 +743,6 @@ function drawTrendChart(){
   ctx.fillStyle = areaGrad;
   ctx.fill();
 
-  // line
   const lineGrad = ctx.createLinearGradient(padL, 0, w-padR, 0);
   lineGrad.addColorStop(0, '#B9D4F0');
   lineGrad.addColorStop(0.5, '#3DA9E8');
@@ -465,21 +752,32 @@ function drawTrendChart(){
   ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
   ctx.stroke();
 
-  // dots + labels
-  ctx.font = '11px -apple-system, sans-serif';
-  ctx.textAlign = 'center';
   pts.forEach(function(pt){
     if(pt.value > 0){
       ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
       ctx.fillStyle = '#EAF3FF'; ctx.fill();
     }
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.fillText(pt.label, pt.x, h - 7);
   });
+  ctx.restore();
 }
 
-// ---------- Donut chart (category split) ----------
+// ---------- Donut chart (category split), animated sweep ----------
+let donutRafId = 0;
 function drawDonutChart(sortedEntries, total){
+  if(donutRafId) cancelAnimationFrame(donutRafId);
+  if(REDUCED_MOTION){ drawDonutFrame(sortedEntries, total, 1); return; }
+  const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  const dur = 700;
+  function step(ts){
+    const nowT = (typeof ts === 'number' && ts > 0) ? ts : Date.now();
+    let p = Math.min(1, (nowT - t0) / dur);
+    if(!(p >= 0)) p = 1;
+    drawDonutFrame(sortedEntries, total, easeOutCubic(p));
+    if(p < 1){ donutRafId = requestAnimationFrame(step); } else { donutRafId = 0; }
+  }
+  donutRafId = requestAnimationFrame(step);
+}
+function drawDonutFrame(sortedEntries, total, progress){
   const canvas = document.getElementById('chart-donut');
   if(!canvas) return;
   const dpr = window.devicePixelRatio || 1;
@@ -501,13 +799,15 @@ function drawDonutChart(sortedEntries, total){
   const gap = single ? 0 : 0.035;
   let start = -Math.PI/2;
   sortedEntries.forEach(function(entry){
-    const ang = (entry[1]/total) * Math.PI*2;
-    const cat = getCategory(entry[0]);
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, start + gap/2, start + ang - gap/2);
-    ctx.strokeStyle = cat.color;
-    ctx.lineWidth = lineW;
-    ctx.stroke();
+    const ang = (entry[1]/total) * Math.PI*2 * progress;
+    if(ang > gap){
+      const cat = getCategory(entry[0]);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, start + gap/2, start + ang - gap/2);
+      ctx.strokeStyle = cat.color;
+      ctx.lineWidth = lineW;
+      ctx.stroke();
+    }
     start += ang;
   });
 }
@@ -548,8 +848,21 @@ function renderHistory(){
 // ---------- BUDGETS ----------
 function renderBudgets(){
   const listEl = document.getElementById('budget-list');
-  const range = getRangeForPeriod('month');
-  const monthTx = txInRange(range.start, range.end).filter(function(t){return t.type==='expense';});
+  const range = getBudgetFilterRange();
+  const rangeTx = txInRange(range.start, range.end).filter(function(t){return t.type==='expense';});
+
+  // reflect the active pill + custom inputs
+  document.querySelectorAll('#budget-range-switch .range-pill').forEach(function(p){
+    p.classList.toggle('active', p.dataset.range === budgetRangePreset);
+  });
+  const customEl = document.getElementById('budget-custom-range');
+  if(customEl) customEl.hidden = budgetRangePreset !== 'custom';
+  const noteEl = document.getElementById('budget-range-note');
+  if(noteEl){
+    noteEl.textContent = state.budgets.length
+      ? range.label + (range.months > 1 ? ' · budgets scaled ×' + range.months : '')
+      : '';
+  }
 
   if(state.budgets.length === 0){
     listEl.innerHTML = '';
@@ -558,19 +871,20 @@ function renderBudgets(){
   }
   document.getElementById('budgets-empty').hidden = true;
 
-  listEl.innerHTML = state.budgets.map(function(b){
+  listEl.innerHTML = state.budgets.map(function(b, i){
     const cat = getCategory(b.categoryId);
-    const spent = monthTx.filter(function(t){return t.categoryId===b.categoryId;}).reduce(function(s,t){return s+t.amount;},0);
-    const pct = b.amount>0 ? Math.min((spent/b.amount)*100, 100) : 0;
-    let statusClass = 'ok', statusText = fmtMoney(b.amount - spent) + ' left';
-    if(spent >= b.amount){ statusClass='over'; statusText = fmtMoney(spent-b.amount) + ' over budget'; }
-    else if(spent/b.amount >= 0.8){ statusClass='warn'; statusText = fmtMoney(b.amount-spent) + ' left · almost there'; }
+    const target = b.amount * range.months;
+    const spent = rangeTx.filter(function(t){return t.categoryId===b.categoryId;}).reduce(function(s,t){return s+t.amount;},0);
+    const pct = target>0 ? Math.min((spent/target)*100, 100) : 0;
+    let statusClass = 'ok', statusText = fmtMoney(target - spent) + ' left';
+    if(spent >= target){ statusClass='over'; statusText = fmtMoney(spent-target) + ' over budget'; }
+    else if(spent/target >= 0.8){ statusClass='warn'; statusText = fmtMoney(target-spent) + ' left · almost there'; }
 
-    return '<div class="budget-card" data-id="'+b.id+'">' +
+    return '<div class="budget-card anim-in" style="--i:'+Math.min(i,12)+'" data-id="'+b.id+'">' +
       '<div class="budget-top">' +
         '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<span class="budget-cat-name">'+escapeHtml(cat.name)+'</span>' +
-        '<span class="budget-amounts"><strong>'+fmtMoney(spent)+'</strong> / '+fmtMoney(b.amount)+'</span>' +
+        '<span class="budget-amounts"><strong>'+fmtMoney(spent)+'</strong> / '+fmtMoney(target)+'</span>' +
       '</div>' +
       '<div class="budget-bar-track"><div class="budget-bar-fill" style="width:'+pct+'%; background:'+(statusClass==='over' ? 'var(--danger)' : cat.color)+';"></div></div>' +
       '<div class="budget-status '+statusClass+'">'+statusText+'</div></div>';
@@ -620,7 +934,14 @@ function renderCategoryManage(){
 
 function showView(name){
   ['home','history','budgets','recurring','settings','categories'].forEach(function(v){
-    document.getElementById('view-'+v).hidden = (v !== name);
+    const el = document.getElementById('view-'+v);
+    const show = (v === name);
+    el.hidden = !show;
+    if(show && !REDUCED_MOTION){
+      el.classList.remove('enter');
+      void el.offsetWidth; // restart the animation
+      el.classList.add('enter');
+    }
   });
   document.getElementById('bottom-nav').hidden = !(name === 'home' || name === 'history' || name === 'budgets' || name === 'recurring');
   document.querySelectorAll('.nav-btn[data-view]').forEach(function(btn){
@@ -641,7 +962,7 @@ function closeSheet(id){
   document.getElementById(id).hidden = true;
 }
 function closeAllSheets(){
-  ['sheet-add','sheet-tx-detail','sheet-income','sheet-budget','sheet-recurring','sheet-category','sheet-profile','sheet-goal'].forEach(function(id){
+  ['sheet-add','sheet-tx-detail','sheet-income','sheet-budget','sheet-recurring','sheet-category','sheet-profile','sheet-goal','sheet-savings'].forEach(function(id){
     const el = document.getElementById(id);
     if(el){ el.hidden = true; el.style.transform = ''; }
   });
@@ -698,6 +1019,11 @@ function saveTransactionFromSheet(){
   const time = document.getElementById('time-input').value || currentHHMM();
   const categoryId = txTypeInSheet === 'expense' ? selectedCategoryInSheet : null;
 
+  // for the over-budget nudge: category spend before this save
+  const watchBudget = (txTypeInSheet === 'expense' && categoryId)
+    ? state.budgets.find(function(b){ return b.categoryId === categoryId; }) : null;
+  const spentBefore = watchBudget ? spentThisMonthFor(categoryId) : 0;
+
   if(editingTxId){
     const tx = state.transactions.find(function(t){ return t.id === editingTxId; });
     if(tx){
@@ -727,7 +1053,12 @@ function saveTransactionFromSheet(){
     saveState();
     closeSheet('sheet-add');
     renderAll();
-    toast(txTypeInSheet === 'expense' ? 'Expense added' : 'Income added');
+    const spentAfter = watchBudget ? spentThisMonthFor(categoryId) : 0;
+    if(watchBudget && spentBefore <= watchBudget.amount && spentAfter > watchBudget.amount){
+      toast('Heads up — over your ' + getCategory(categoryId).name + ' budget by ' + fmtMoney(spentAfter - watchBudget.amount));
+    } else {
+      toast(txTypeInSheet === 'expense' ? 'Expense added' : 'Income added');
+    }
   }
 }
 
@@ -1075,6 +1406,42 @@ function wireEvents(){
 
   // Export / import / reset
   document.getElementById('btn-export').addEventListener('click', exportBackup);
+  document.getElementById('btn-export-csv').addEventListener('click', exportCsv);
+
+  // v3: savings history
+  document.getElementById('savings-card').addEventListener('click', openSavingsSheet);
+
+  // v3: budget date-range filter
+  document.getElementById('budget-range-switch').addEventListener('click', function(e){
+    const pill = e.target.closest('.range-pill');
+    if(!pill) return;
+    budgetRangePreset = pill.dataset.range;
+    if(budgetRangePreset === 'custom' && !budgetCustomFrom && !budgetCustomTo){
+      const now = new Date();
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      budgetCustomFrom = first.getFullYear() + '-' + String(first.getMonth()+1).padStart(2,'0') + '-01';
+      budgetCustomTo = todayISO();
+      document.getElementById('budget-from').value = budgetCustomFrom;
+      document.getElementById('budget-to').value = budgetCustomTo;
+    }
+    renderBudgets();
+  });
+  document.getElementById('budget-from').addEventListener('change', function(){
+    budgetCustomFrom = this.value; renderBudgets();
+  });
+  document.getElementById('budget-to').addEventListener('change', function(){
+    budgetCustomTo = this.value; renderBudgets();
+  });
+
+  // v3: quick amount chips
+  document.getElementById('quick-chips').addEventListener('click', function(e){
+    const chip = e.target.closest('.quick-chip');
+    if(!chip) return;
+    const input = document.getElementById('amount-input');
+    const current = parseAmount(input.value);
+    const next = (isNaN(current) ? 0 : current) + parseInt(chip.dataset.add, 10);
+    input.value = formatAmountString(String(next));
+  });
   document.getElementById('btn-import').addEventListener('click', function(){
     document.getElementById('import-file-input').click();
   });
@@ -1121,7 +1488,7 @@ function wireEvents(){
   document.getElementById('sheet-backdrop').addEventListener('click', closeAllSheets);
 
   // Drag-to-dismiss for every sheet (handle + header)
-  ['sheet-add','sheet-tx-detail','sheet-income','sheet-budget','sheet-recurring','sheet-category','sheet-profile','sheet-goal'].forEach(makeSheetDraggable);
+  ['sheet-add','sheet-tx-detail','sheet-income','sheet-budget','sheet-recurring','sheet-category','sheet-profile','sheet-goal','sheet-savings'].forEach(makeSheetDraggable);
 
   // Instagram-style nav: shrink on scroll down, grow on scroll up
   initNavScroll();

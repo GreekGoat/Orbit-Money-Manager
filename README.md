@@ -5,6 +5,30 @@ All data stays **on your device** (browser local storage). No accounts, no serve
 
 ---
 
+## New in v3.0
+
+- **Motion everywhere** — numbers count up as they change, the area chart draws in left-to-right, the donut sweeps around, lists and cards cascade in with a gentle stagger, views slide in as you switch tabs, and taps give springy press feedback. Everything switches off automatically if iOS "Reduce Motion" is on.
+- **Budget date-range filter** — see budget status for This month, Last month, 3 months, This year, or any Custom range. Multi-month ranges scale your budget targets (e.g. a ৳1,000 monthly budget becomes ৳3,000 over 3 months).
+- **Total savings** — a new Home card adds up what you saved each month since you started. Tap it for a month-by-month history with income, spending, saved amount, and the running total.
+- **Insights** — a Home card comparing this month to last, plus your top category, biggest expense, and daily average.
+- **Quick amount chips** — +100 / +500 / +1,000 / +5,000 buttons in the add sheet for faster entry.
+- **Over-budget nudge** — a warning toast the moment an expense pushes a category past its budget.
+- **CSV export** — download all transactions as a spreadsheet from Settings.
+
+---
+
+## New in v2.0
+
+- **First-run onboarding** — a 4-step welcome that captures your name, age, profile photo/icon, currency, monthly income, and an optional savings goal. (Only shows for brand-new installs.)
+- **Profile** — your name and avatar (uploaded photo or chosen icon) sit in the top-right; a time-of-day greeting sits on the left. Edit anytime from Settings.
+- **Savings goal** — set a monthly target and a progress strip on Home tracks how close you are.
+- **Richer charts** — the spending breakdown is now a smooth "uphill" area chart, and category spending is shown as a donut chart with the category list as its legend.
+- **Time on transactions** — add a time alongside the date, so the Day view's hourly breakdown is accurate.
+- **Live amount formatting** — thousands separators appear as you type (e.g. `1,250,000`).
+- **Motion & polish** — a slowly drifting animated background, a gently glowing orbit ring, a subtle pulse on the Add button, an Instagram-style floating toolbar that shrinks as you scroll down, and swipe-down-to-dismiss sheets.
+
+---
+
 ## What's inside
 
 | File | Purpose |
