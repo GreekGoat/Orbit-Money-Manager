@@ -5,6 +5,20 @@ All data stays **on your device** (browser local storage). No accounts, no serve
 
 ---
 
+## New in v4.0 — "Aurora"
+
+A ground-up visual revamp with a living background and springy motion throughout.
+
+- **Fixed: the animated background was invisible** — a CSS stacking bug meant the moving glow layers were painted *behind* the app's solid backdrop on every device. The aurora now lives on its own explicit layer: three drifting light blobs, a slowly rotating color sweep, twinkling stars, and a gentle hue shift. Always visible, always moving.
+- **New theme** — deep-space indigo with a violet → cyan aurora palette, gradient-edged glass panels, gradient hero numbers, and glowing accents.
+- **Motion system** — springy view transitions, a gliding pill that follows the active tab in the nav, an orbiting comet on the ring, a rotating halo behind it, shimmer on progress bars and the save button, animated onboarding steps, floating empty-states.
+- **Smoothness fix** — entrance cascades and chart sweeps now play on load, view entry, and period switches only; saving a transaction updates numbers smoothly (count-up) without re-triggering every animation.
+- **Reliable updates** — the service worker is now network-first for the app shell, with versioned assets (`?v=4`) and cache v6. New deploys appear on the next online launch: no more stale app.
+- **New insights** — month-end spending pace projection and a daily logging streak.
+- All motion still switches off automatically under iOS Reduce Motion.
+
+---
+
 ## New in v3.0
 
 - **Motion everywhere** — numbers count up as they change, the area chart draws in left-to-right, the donut sweeps around, lists and cards cascade in with a gentle stagger, views slide in as you switch tabs, and taps give springy press feedback. Everything switches off automatically if iOS "Reduce Motion" is on.

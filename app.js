@@ -247,6 +247,16 @@ let historySearch = '';
 // ===================== v3: MOTION + DERIVED FEATURES =====================
 const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
+// When true, the next render cycle plays entrance cascades + chart sweeps.
+// Set on load, view entry, and period switches — NOT on ordinary data saves,
+// so adding/editing a transaction updates values smoothly without re-triggering
+// every animation (this was the "choppiness" in v3).
+let entryAnimate = true;
+function requestEntryAnimation(){ entryAnimate = true; }
+function stagAttr(i){
+  return entryAnimate ? ' anim-in" style="--i:' + Math.min(i || 0, 12) + '"' : '"';
+}
+
 function easeOutCubic(p){ return 1 - Math.pow(1 - p, 3); }
 
 // Count-up number animation. Remembers the previous value per element so
@@ -384,7 +394,18 @@ function computeInsights(){
   let biggest = null;
   monthExp.forEach(function(t){ if(!biggest || t.amount > biggest.amount) biggest = t; });
   const dailyAvg = thisSpent / Math.max(1, now.getDate());
-  return { thisSpent: thisSpent, lastSpent: lastSpent, top: top, biggest: biggest, dailyAvg: dailyAvg };
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const pace = Math.round(dailyAvg * daysInMonth);
+  // logging streak: consecutive days (ending today) with at least one transaction
+  const daysWithTx = {};
+  state.transactions.forEach(function(t){ if(t.date) daysWithTx[t.date] = true; });
+  let streak = 0;
+  const cur = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  while(true){
+    const key = cur.getFullYear() + '-' + String(cur.getMonth()+1).padStart(2,'0') + '-' + String(cur.getDate()).padStart(2,'0');
+    if(daysWithTx[key]){ streak++; cur.setDate(cur.getDate()-1); } else { break; }
+  }
+  return { thisSpent: thisSpent, lastSpent: lastSpent, top: top, biggest: biggest, dailyAvg: dailyAvg, pace: pace, streak: streak };
 }
 
 function renderInsights(){
@@ -414,9 +435,13 @@ function renderInsights(){
   }
   if(ins.thisSpent > 0){
     rows.push({ icon: '<rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 9h16M9 3v4M15 3v4"/>', text: 'Daily average this month: ' + fmtMoney(Math.round(ins.dailyAvg)) + '.' });
+    rows.push({ icon: '<path d="M4 19h16M6 19V9m6 10V5m6 14v-8"/>', text: 'At this pace: about <strong>' + fmtMoney(ins.pace) + '</strong> by month-end.' });
+  }
+  if(ins.streak >= 2){
+    rows.push({ icon: '<path d="M12 3c1.5 3-2.5 4.5-1 7 .8 1.3 2.5 1 3-1 2.5 1.5 3.5 4 3.5 6a5.5 5.5 0 11-11 0c0-4 3.5-5.5 5.5-12z"/>', text: '<strong>' + ins.streak + '-day</strong> logging streak — keep it going!', cls: 'good' });
   }
   card.innerHTML = rows.map(function(r, i){
-    return '<div class="insight-row anim-in '+(r.cls||'')+'" style="--i:'+i+'">' +
+    return '<div class="insight-row '+(r.cls||'')+(entryAnimate ? ' anim-in" style="--i:'+i+'"' : '"')+'>' +
       '<span class="insight-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'+r.icon+'</svg></span>' +
       '<span class="insight-text">'+r.text+'</span></div>';
   }).join('');
@@ -502,6 +527,7 @@ function spentThisMonthFor(categoryId){
 }
 
 function renderAll(){
+  const __wasEntry = entryAnimate;
   renderCurrencySymbols();
   renderProfile();
   renderHome();
@@ -509,7 +535,7 @@ function renderAll(){
   renderBudgets();
   renderRecurring();
   renderSettings();
-  renderCategoryManage();
+  renderCategoryManage();  entryAnimate = false;
 }
 
 function renderCurrencySymbols(){
@@ -568,7 +594,7 @@ function renderHome(){
       const catId = entry[0], amt = entry[1];
       const cat = getCategory(catId);
       const pctOfTotal = totalSpentPeriod>0 ? Math.round((amt/totalSpentPeriod)*100) : 0;
-      return '<div class="category-row anim-in" style="--i:'+Math.min(i,12)+'">' +
+      return '<div class="category-row'+stagAttr(i)+'>' +
         '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<div class="cat-info">' +
           '<div class="cat-name-row"><span class="cat-name">'+escapeHtml(cat.name)+'</span><span class="cat-amount">'+fmtMoney(amt)+' · '+pctOfTotal+'%</span></div>' +
@@ -602,7 +628,7 @@ function renderTxRow(t, i){
   const dateLabel = formatDateLabel(t.date);
   const iconBg = isIncome ? 'rgba(185,212,240,0.18)' : (cat.color + '22');
   const glyph = isIncome ? incomeGlyph() : catGlyph(cat);
-  const stagger = (typeof i === 'number') ? ' anim-in" style="--i:' + Math.min(i, 12) + '"' : '"';
+  const stagger = (typeof i === 'number') ? stagAttr(i) : '"';
   return '<div class="tx-row' + stagger + ' data-id="'+t.id+'">' +
     '<div class="cat-icon" style="background:'+iconBg+';">'+glyph+'</div>' +
     '<div class="tx-info">' +
@@ -670,7 +696,7 @@ function computeTrendBuckets(){
 let trendRafId = 0;
 function drawTrendChart(){
   if(trendRafId) cancelAnimationFrame(trendRafId);
-  if(REDUCED_MOTION){ drawTrendFrame(1); return; }
+  if(REDUCED_MOTION || !entryAnimate){ drawTrendFrame(1); return; }
   const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const dur = 650;
   function step(ts){
@@ -734,8 +760,8 @@ function drawTrendFrame(progress){
   ctx.clip();
 
   const areaGrad = ctx.createLinearGradient(0, padTop, 0, padTop+chartH);
-  areaGrad.addColorStop(0, 'rgba(94,170,235,0.42)');
-  areaGrad.addColorStop(1, 'rgba(94,170,235,0.02)');
+  areaGrad.addColorStop(0, 'rgba(124,92,255,0.45)');
+  areaGrad.addColorStop(1, 'rgba(34,211,238,0.02)');
   tracePath();
   ctx.lineTo(pts[pts.length-1].x, padTop+chartH);
   ctx.lineTo(pts[0].x, padTop+chartH);
@@ -744,9 +770,9 @@ function drawTrendFrame(progress){
   ctx.fill();
 
   const lineGrad = ctx.createLinearGradient(padL, 0, w-padR, 0);
-  lineGrad.addColorStop(0, '#B9D4F0');
-  lineGrad.addColorStop(0.5, '#3DA9E8');
-  lineGrad.addColorStop(1, '#5B6EF5');
+  lineGrad.addColorStop(0, '#A78BFA');
+  lineGrad.addColorStop(0.5, '#22D3EE');
+  lineGrad.addColorStop(1, '#7C5CFF');
   tracePath();
   ctx.strokeStyle = lineGrad;
   ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
@@ -755,7 +781,7 @@ function drawTrendFrame(progress){
   pts.forEach(function(pt){
     if(pt.value > 0){
       ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, Math.PI*2);
-      ctx.fillStyle = '#EAF3FF'; ctx.fill();
+      ctx.fillStyle = '#F0ECFF'; ctx.fill();
     }
   });
   ctx.restore();
@@ -765,7 +791,7 @@ function drawTrendFrame(progress){
 let donutRafId = 0;
 function drawDonutChart(sortedEntries, total){
   if(donutRafId) cancelAnimationFrame(donutRafId);
-  if(REDUCED_MOTION){ drawDonutFrame(sortedEntries, total, 1); return; }
+  if(REDUCED_MOTION || !entryAnimate){ drawDonutFrame(sortedEntries, total, 1); return; }
   const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
   const dur = 700;
   function step(ts){
@@ -880,7 +906,7 @@ function renderBudgets(){
     if(spent >= target){ statusClass='over'; statusText = fmtMoney(spent-target) + ' over budget'; }
     else if(spent/target >= 0.8){ statusClass='warn'; statusText = fmtMoney(target-spent) + ' left · almost there'; }
 
-    return '<div class="budget-card anim-in" style="--i:'+Math.min(i,12)+'" data-id="'+b.id+'">' +
+    return '<div class="budget-card'+stagAttr(i)+' data-id="'+b.id+'">' +
       '<div class="budget-top">' +
         '<div class="cat-icon" style="background:'+cat.color+'22;">'+catGlyph(cat)+'</div>' +
         '<span class="budget-cat-name">'+escapeHtml(cat.name)+'</span>' +
@@ -949,6 +975,7 @@ function showView(name){
   });
   currentView = name;
   window.scrollTo(0,0);
+  updateNavGlide();
 }
 
 // ===================== SHEETS =====================
@@ -1338,7 +1365,9 @@ function wireEvents(){
     document.querySelectorAll('.period-pill').forEach(function(p){p.classList.remove('active');});
     pill.classList.add('active');
     currentPeriod = pill.dataset.period;
+    requestEntryAnimation();
     renderHome();
+    entryAnimate = false;
   });
 
   // Add / edit transaction sheet
@@ -1627,11 +1656,13 @@ function renderGoalStrip(saved){
   fill.style.width = pct + '%';
   const note = document.getElementById('goal-strip-note');
   if(have >= goal){
-    note.textContent = 'Goal reached — nicely done.';
+    note.textContent = 'Goal reached — nicely done 🎉';
     fill.classList.add('reached');
+    strip.classList.add('complete');
   } else {
     note.textContent = Math.round(pct) + '% there · ' + fmtMoney(goal - have) + ' to go';
     fill.classList.remove('reached');
+    strip.classList.remove('complete');
   }
 }
 
@@ -1811,6 +1842,18 @@ function saveGoal(){
   toast(state.savingsGoal > 0 ? 'Savings goal set' : 'Savings goal turned off');
 }
 
+// ---------- Nav glide: sliding active indicator ----------
+function updateNavGlide(){
+  const glide = document.getElementById('nav-glide');
+  const nav = document.getElementById('bottom-nav');
+  if(!glide || !nav || nav.hidden) return;
+  const active = nav.querySelector('.nav-btn.active[data-view]');
+  if(!active){ glide.style.opacity = '0'; return; }
+  glide.style.opacity = '1';
+  glide.style.width = active.offsetWidth + 'px';
+  glide.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+}
+
 // ---------- Instagram-style nav: shrink on scroll ----------
 let lastScrollY = 0;
 function initNavScroll(){
@@ -1882,6 +1925,10 @@ function init(){
   if(!state.onboarded){
     startOnboarding();
   }
+
+  updateNavGlide();
+  window.addEventListener('resize', updateNavGlide);
+  setTimeout(updateNavGlide, 60); // after first paint/fonts
 
   if('serviceWorker' in navigator && navigator.serviceWorker){
     navigator.serviceWorker.register('sw.js').catch(function(err){

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'orbit-cache-v5';
+const CACHE_NAME = 'orbit-cache-v6';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
+  './style.css?v=4',
+  './app.js?v=4',
   './manifest.json',
   './icon-180.png',
   './icon-512.png',
@@ -28,13 +28,32 @@ self.addEventListener('activate', function(event){
 });
 
 self.addEventListener('fetch', function(event){
+  const req = event.request;
+  if(req.method !== 'GET') return;
+
+  // NETWORK-FIRST for page navigations: a fresh deploy shows up on the very
+  // next online launch. Cache is only the offline fallback.
+  if(req.mode === 'navigate'){
+    event.respondWith(
+      fetch(req).then(function(response){
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(function(cache){ cache.put(req, clone); });
+        return response;
+      }).catch(function(){
+        return caches.match(req).then(function(c){ return c || caches.match('./index.html'); });
+      })
+    );
+    return;
+  }
+
+  // CACHE-FIRST for versioned assets (?v=N in the HTML busts these naturally).
   event.respondWith(
-    caches.match(event.request).then(function(cached){
+    caches.match(req).then(function(cached){
       if(cached) return cached;
-      return fetch(event.request).then(function(response){
-        if(event.request.method === 'GET' && response.ok){
-          const respClone = response.clone();
-          caches.open(CACHE_NAME).then(function(cache){ cache.put(event.request, respClone); });
+      return fetch(req).then(function(response){
+        if(response.ok){
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(function(cache){ cache.put(req, clone); });
         }
         return response;
       }).catch(function(){
