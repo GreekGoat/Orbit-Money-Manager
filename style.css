@@ -67,6 +67,12 @@
 }
 
 *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* CRITICAL: the `hidden` attribute must always win, even over author
+   display:flex/grid declarations (which otherwise override the browser's
+   default [hidden]{display:none}). Without this guard, elements like the
+   onboarding overlay reappear after being hidden. */
+[hidden]{ display: none !important; }
 html, body{ margin:0; padding:0; background: var(--bg-deep); }
 body{
   font-family: var(--font-text);
@@ -871,16 +877,14 @@ button{ font-family: inherit; cursor: pointer; }
   background: rgba(4,6,16,0.55);
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  opacity: 0;
-  transition: opacity .35s ease;
-  pointer-events: none;
+  animation: backdropIn .35s ease;
 }
-.sheet-backdrop.show{ opacity: 1; pointer-events: auto; }
+@keyframes backdropIn{ from{ opacity: 0; } to{ opacity: 1; } }
 
 .sheet{
   position: fixed; z-index: 90;
   left: 50%; bottom: 0;
-  transform: translate(-50%, 105%);
+  transform: translate(-50%, 0);
   width: 100%; max-width: 520px;
   max-height: 88vh; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
@@ -893,9 +897,13 @@ button{ font-family: inherit; cursor: pointer; }
   backdrop-filter: blur(28px);
   box-shadow: 0 -14px 44px rgba(2,4,16,0.6), var(--glass-highlight);
   padding: 10px 20px calc(env(safe-area-inset-bottom) + 22px);
-  transition: transform .5s var(--spring);
+  animation: sheetIn .55s var(--spring);
+  transition: transform .3s var(--ease-out); /* used by drag-to-dismiss snap-back */
 }
-.sheet.show{ transform: translate(-50%, 0); }
+@keyframes sheetIn{
+  from{ transform: translate(-50%, 105%); }
+  to  { transform: translate(-50%, 0); }
+}
 .sheet-handle{
   width: 42px; height: 4.5px; border-radius: 99px;
   background: rgba(255,255,255,0.22);

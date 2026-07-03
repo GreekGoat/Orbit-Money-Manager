@@ -1,9 +1,9 @@
-const CACHE_NAME = 'orbit-cache-v6';
+const CACHE_NAME = 'orbit-cache-v7';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=4',
-  './app.js?v=4',
+  './style.css?v=4.1',
+  './app.js?v=4.1',
   './manifest.json',
   './icon-180.png',
   './icon-512.png',
