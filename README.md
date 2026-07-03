@@ -17,6 +17,7 @@ A ground-up visual revamp with a living background and springy motion throughout
 - **New insights** — month-end spending pace projection and a daily logging streak.
 - All motion still switches off automatically under iOS Reduce Motion.
 
+
 ---
 
 ## New in v3.0
